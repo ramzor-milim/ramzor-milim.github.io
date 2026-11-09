@@ -57,6 +57,18 @@ header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; backg
 select { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 6px 10px; font-weight: 600; }
 .scope .total { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
 
+.unit-pick { position: relative; }
+.unit-pick summary { list-style: none; cursor: pointer; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 6px 30px 6px 12px; font-weight: 600; position: relative; white-space: nowrap; }
+.unit-pick summary::-webkit-details-marker { display: none; }
+.unit-pick summary::after { content: "▾"; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: .8rem; }
+.unit-pick summary { padding: 6px 12px 6px 28px; }
+.unit-menu { position: absolute; top: calc(100% + 6px); inset-inline-start: 0; z-index: 20; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px; box-shadow: 0 12px 30px rgb(0 0 0 / .14); width: min(320px, calc(100vw - 32px)); display: grid; gap: 8px; }
+.unit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+.unit-opt { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: .9rem; }
+.unit-opt:hover { background: var(--bg); }
+.unit-opt input { width: 16px; height: 16px; accent-color: var(--accent); }
+.unit-opt small { margin-inline-start: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+.unit-actions { display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 6px; }
 .bar { display: flex; height: 8px; border-radius: 99px; overflow: hidden; background: var(--new-soft); }
 .bar span { display: block; height: 100%; transition: width .3s; }
 .bar .b-g { background: var(--green); } .bar .b-o { background: var(--orange); } .bar .b-r { background: var(--red); } .bar .b-n { background: var(--new-soft); }
@@ -366,8 +378,8 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
       </div>
     </div>
     <div class="scope">
-      <label for="unitSel" class="total">מילים מ:</label>
-      <select id="unitSel"></select>
+      <span class="total">מילים מ:</span>
+      <details class="unit-pick" id="unitPick"><summary id="unitLabel">יחידה 1</summary><div class="unit-menu" id="unitMenu"></div></details>
       <span class="total" id="total"></span>
       <button type="button" class="acct" id="acctBtn" data-in="false" hidden><i></i><span id="acctLabel">התחברות</span></button>
     </div>
@@ -488,9 +500,8 @@ function allWords(lang = ui.lang) {
 function words(lang = ui.lang) {
   const all = allWords(lang);
   if (ui.unit === "all") return all;
-  if (ui.unit === "mine") return all.filter((x) => x.custom);
-  const u = Number(ui.unit);
-  return all.filter((x) => x.u === u);
+  const set = new Set(String(ui.unit).split(","));
+  return all.filter((x) => (x.custom ? set.has("mine") : set.has(String(x.u))));
 }
 const entry = (w, lang = ui.lang) => state.p[lang][w] || {};
 const statusOf = (w, lang = ui.lang) => entry(w, lang).s || "n";
@@ -629,13 +640,40 @@ function counts() {
   for (const x of words()) c[statusOf(x.w)]++;
   return c;
 }
+function selectedUnits() {
+  const hasMine = state.c[ui.lang].length > 0;
+  if (ui.unit === "all") return new Set(UNITS.map(String).concat(hasMine ? ["mine"] : []));
+  const valid = new Set(UNITS.map(String).concat(hasMine ? ["mine"] : []));
+  const set = new Set(String(ui.unit).split(",").filter((x) => valid.has(x)));
+  if (!set.size) { ui.unit = "1"; return new Set(["1"]); }
+  return set;
+}
+function unitLabelText(set) {
+  if (ui.unit === "all") return "כל היחידות";
+  const nums = [...set].filter((x) => x !== "mine").map(Number).sort((a, b) => a - b);
+  const parts = [];
+  for (let i = 0; i < nums.length; i++) {
+    let j = i; while (j + 1 < nums.length && nums[j + 1] === nums[j] + 1) j++;
+    parts.push(j - i >= 2 ? `${nums[i]}–${nums[j]}` : j > i ? `${nums[i]}, ${nums[j]}` : `${nums[i]}`);
+    i = j;
+  }
+  const txt = nums.length ? (nums.length === 1 ? "יחידה " : "יחידות ") + parts.join(", ") : "";
+  return set.has("mine") ? (txt ? txt + " + המילים שלי" : "המילים שלי") : txt;
+}
 function renderUnitSelect() {
-  const sel = $("unitSel");
-  const all = allWords();
-  const opts = [["all", "כל היחידות"]].concat(UNITS.map((u) => [String(u), "יחידה " + u]));
-  if (state.c[ui.lang].length) opts.push(["mine", "המילים שלי"]);
-  sel.innerHTML = opts.map(([v, l]) => `<option value="${v}"${ui.unit === v ? " selected" : ""}>${l}</option>`).join("");
-  if (!opts.some(([v]) => v === ui.unit)) { ui.unit = "1"; sel.value = "1"; }
+  const set = selectedUnits(), all = allWords();
+  $("unitLabel").textContent = unitLabelText(set);
+  const opts = UNITS.map((u) => [String(u), "יחידה " + u, all.filter((x) => x.u === u).length]);
+  if (state.c[ui.lang].length) opts.push(["mine", "המילים שלי", state.c[ui.lang].length]);
+  $("unitMenu").innerHTML = `<div class="unit-grid">${opts.map(([v, l, n]) => `<label class="unit-opt"><input type="checkbox" class="unit-cb" value="${v}"${set.has(v) ? " checked" : ""}><span>${l}</span><small>${n}</small></label>`).join("")}</div>
+    <div class="unit-actions"><button type="button" class="link" id="unitAll">כל היחידות</button><button type="button" class="link" id="unitDone">סגירה</button></div>`;
+}
+function applyUnitChecks() {
+  const boxes = [...document.querySelectorAll(".unit-cb")];
+  const on = boxes.filter((b) => b.checked).map((b) => b.value);
+  if (!on.length) { renderUnitSelect(); return; }   // keep at least one unit selected
+  ui.unit = on.length === boxes.length ? "all" : on.join(",");
+  saveUI(); resetView();
 }
 function renderHeader() {
   const c = counts(), total = c.r + c.o + c.g + c.n;
@@ -954,6 +992,8 @@ function resetView() { for (const k in cache) delete cache[k]; listShown = PAGE;
 
 /* ---------- Events ---------- */
 document.addEventListener("click", (e) => {
+  const pick = document.getElementById("unitPick");
+  if (pick && pick.open && !e.target.closest("#unitPick")) pick.open = false;
   if (e.target.closest("#homeLink")) {
     e.preventDefault();
     const d = document.getElementById("acctDlg"); if (d && d.open) d.close();
@@ -972,6 +1012,8 @@ document.addEventListener("click", (e) => {
   if (t.dataset.rate) { rate(t.dataset.rate); return; }
   if (t.id === "prevBtn") { pos = Math.max(0, pos - 1); revealed = false; hint = false; renderPractice(); return; }
   if (t.id === "undoBtn") { undoRate(); return; }
+  if (t.id === "unitAll") { ui.unit = "all"; saveUI(); resetView(); return; }
+  if (t.id === "unitDone") { $("unitPick").open = false; return; }
   if (t.dataset.unitJump) { ui.unit = t.dataset.unitJump; ui.view = "practice"; saveUI(); resetView(); window.scrollTo(0, 0); return; }
   if (t.classList.contains("signup-link")) { const a = document.getElementById("acctBtn"); if (a && !a.hidden) a.click(); return; }
   if (t.id === "nextBtn") { pos++; revealed = false; hint = false; renderPractice(); return; }
@@ -1039,7 +1081,7 @@ document.addEventListener("toggle", (e) => {
   const x = listItems[Number(row.dataset.i)]; if (x) row.insertAdjacentHTML("beforeend", rowBodyHTML(x));
 }, true);
 document.addEventListener("change", (e) => {
-  if (e.target.id === "unitSel") { ui.unit = e.target.value; saveUI(); resetView(); }
+  if (e.target.classList && e.target.classList.contains("unit-cb")) { applyUnitChecks(); return; }
 });
 let searchTimer = null;
 document.addEventListener("input", (e) => {
