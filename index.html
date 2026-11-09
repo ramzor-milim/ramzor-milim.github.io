@@ -575,9 +575,9 @@ function renderPractice() {
       ${revealed ? assocHTML(w) : hint ? hintHTML(w) : ""}
     </div>
     <div class="rate">
-      <button type="button" class="r" data-rate="r" aria-current="${s === "r"}">לא יודע<small>אדום · 1</small></button>
+      <button type="button" class="g" data-rate="g" aria-current="${s === "g"}">יודע<small>ירוק · 1</small></button>
       <button type="button" class="o" data-rate="o" aria-current="${s === "o"}">לא בטוח<small>כתום · 2</small></button>
-      <button type="button" class="g" data-rate="g" aria-current="${s === "g"}">יודע<small>ירוק · 3</small></button>
+      <button type="button" class="r" data-rate="r" aria-current="${s === "r"}">לא יודע<small>אדום · 3</small></button>
     </div>
     <div class="nav">
       <button type="button" id="prevBtn" ${pos === 0 ? "disabled" : ""}>→ הקודמת</button>
@@ -678,7 +678,7 @@ function renderHow() {
     <div class="how-also">
       <p><b>אסוציאציות.</b> כותבים לכל מילה טריק שעוזר לזכור, ורואים את הטריקים של משתמשים אחרים. 👍 למה שעובד, ⭐ למועדפים.</p>
       <p><b>משתמש.</b> מתחברים, וההתקדמות נשמרת ומסונכרנת בין הטלפון למחשב.</p>
-      <p class="how-keys"><b>קיצורי מקלדת במחשב.</b> <kbd>1</kbd> אדום · <kbd>2</kbd> כתום · <kbd>3</kbd> ירוק · <kbd>רווח</kbd> הצגת הפירוש או הסתרתו · <kbd>←</kbd> <kbd>→</kbd> מעבר בין מילים</p>
+      <p class="how-keys"><b>קיצורי מקלדת במחשב.</b> <kbd>1</kbd> ירוק · <kbd>2</kbd> כתום · <kbd>3</kbd> אדום · <kbd>רווח</kbd> הצגת הפירוש או הסתרתו · <kbd>←</kbd> <kbd>→</kbd> מעבר בין מילים</p>
     </div>
     <button type="button" class="primary how-start" data-view="practice">להתחיל לתרגל</button>
   </section>`;
@@ -865,7 +865,7 @@ document.addEventListener("keydown", (e) => {
   }
   if (!DICT || ui.view !== "practice" || e.target.closest("textarea, input, select") || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key === " " || e.key === "Enter") { if (e.target.closest("button")) return; e.preventDefault(); if (pos < queue.length) { revealed = !revealed; if (!revealed) hint = false; renderPractice(); } }
-  else if (e.key === "1") rate("r"); else if (e.key === "2") rate("o"); else if (e.key === "3") rate("g");
+  else if (e.key === "1") rate("g"); else if (e.key === "2") rate("o"); else if (e.key === "3") rate("r");
   else if (e.key === "ArrowLeft") { if (pos < queue.length) { pos++; revealed = false; hint = false; renderPractice(); } }
   else if (e.key === "ArrowRight") { if (pos > 0) { pos--; revealed = false; hint = false; renderPractice(); } }
 });
