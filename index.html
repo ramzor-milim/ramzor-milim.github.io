@@ -96,6 +96,23 @@ kbd { font-family: var(--body); font-size: .72rem; border: 1px solid var(--line)
 .img-preview img { max-width: 64px; max-height: 48px; border-radius: 6px; border: 1px solid var(--line); object-fit: cover; }
 .img-preview button { border: 0; background: none; color: var(--red); font-weight: 700; font-size: .8rem; padding: 2px; }
 .hint-box h4 { margin: 0; font-size: .8rem; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
+/* How it works */
+.how { display: grid; gap: 16px; padding-block: 8px 4px; }
+.how-pill { justify-self: start; font-size: .8rem; font-weight: 600; color: var(--orange); background: var(--orange-soft); border: 1px solid color-mix(in srgb, var(--orange) 45%, transparent); border-radius: 99px; padding: 4px 12px; }
+.how h2 { margin: 0; font-family: var(--display); font-size: clamp(1.6rem, 6vw, 2.2rem); line-height: 1.2; text-wrap: balance; }
+.how-lead { margin: 0; color: var(--muted); font-size: 1.02rem; line-height: 1.65; max-width: 60ch; }
+.how-steps { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.how-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px 16px; display: grid; gap: 8px; align-content: start; }
+.how-num { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; color: var(--orange); background: var(--orange-soft); }
+.how-card h3 { margin: 0; font-size: 1.05rem; }
+.how-card p { margin: 0; color: var(--muted); line-height: 1.55; font-size: .93rem; }
+.how-colors { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; color: var(--muted); font-size: .93rem; line-height: 1.45; }
+.how-colors li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: baseline; }
+.how-colors b { color: var(--ink); margin-inline-end: 4px; }
+.how-also { border-top: 1px solid var(--line); padding-top: 12px; display: grid; gap: 6px; }
+.how-also p { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.55; }
+.how-also b { color: var(--ink); }
+.how-start { justify-self: start; }
 .small-link { font-size: .82rem; font-weight: 600; color: var(--muted); padding: 2px; }
 .hint { margin: 0; color: var(--muted); font-style: italic; text-align: center; white-space: pre-wrap; }
 .assoc { display: grid; gap: 8px; }
@@ -241,6 +258,7 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
     <div class="seg-tabs" role="group" aria-label="תצוגה">
       <button type="button" id="view-practice" data-view="practice">תרגול</button>
       <button type="button" id="view-list" data-view="list">רשימה</button>
+      <button type="button" id="view-how" data-view="how">איך זה עובד</button>
     </div>
     <button type="button" class="link" id="shuffleBtn"></button>
   </div>
@@ -503,9 +521,10 @@ function renderHeader() {
       <span class="l"><span class="check" aria-hidden="true"></span><span class="dot s-${s}"></span>${STATUS[s]}</span>
     </button>`).join("");
   for (const l of ["en", "he"]) $("lang-" + l).setAttribute("aria-pressed", ui.lang === l);
-  for (const v of ["practice", "list"]) $("view-" + v).setAttribute("aria-pressed", ui.view === v);
+  for (const v of ["practice", "list", "how"]) $("view-" + v).setAttribute("aria-pressed", ui.view === v);
   $("shuffleBtn").textContent = ui.shuffle ? "סדר: מעורבב" : "סדר: לפי המילון";
   $("shuffleBtn").hidden = ui.view !== "practice";
+  document.querySelector(".scope").hidden = document.getElementById("bar").hidden = document.getElementById("chips").hidden = ui.view === "how";
 }
 
 /* ---------- Practice ---------- */
@@ -626,7 +645,41 @@ function updateRow(rowEl) {
 }
 
 /* ---------- Render ---------- */
-function render() { renderHeader(); ui.view === "practice" ? renderPractice() : renderList(); }
+function render() { renderHeader(); ui.view === "practice" ? renderPractice() : ui.view === "how" ? renderHow() : renderList(); }
+function renderHow() {
+  $("main").innerHTML = `
+  <section class="how" aria-labelledby="how-title">
+    <span class="how-pill">נבנה בשביל מי שמתכונן לפסיכומטרי</span>
+    <h2 id="how-title">כל מילה מקבלת צבע, ואתם לומדים רק את מה שצריך.</h2>
+    <p class="how-lead">עוברים פעם אחת על כל המילים ביחידה וממיינים אותן לשלוש ערימות. מילים שאתם כבר מכירים יוצאות מהדרך, וכל השאר מחכות לכם בצבע שבחרתם. ככה הזמן הולך על המילים שבאמת צריך ללמוד.</p>
+    <ol class="how-steps">
+      <li class="how-card">
+        <span class="how-num">1</span>
+        <h3>עוברים על היחידה</h3>
+        <p>בוחרים יחידה. בכל כרטיסייה מופיעה מילה: מנסים להיזכר בפירוש, ואז מציגים אותו.</p>
+      </li>
+      <li class="how-card">
+        <span class="how-num">2</span>
+        <h3>ממיינים לשלושה צבעים</h3>
+        <ul class="how-colors">
+          <li><span class="dot s-g"></span><span><b>ירוק</b> מכירים. היא לא תחזור יותר.</span></li>
+          <li><span class="dot s-o"></span><span><b>כתום</b> לא בטוחים, או רוצים ללמוד אותה.</span></li>
+          <li><span class="dot s-r"></span><span><b>אדום</b> קשה מאוד. אולי תוותרו עליה למבחן.</span></li>
+        </ul>
+      </li>
+      <li class="how-card">
+        <span class="how-num">3</span>
+        <h3>מתרגלים רק את מה שנשאר</h3>
+        <p>מסמנים למעלה כתום, אדום או את שניהם, ועוברים רק עליהם. בכל סבב הסדר מתערבב מחדש.</p>
+      </li>
+    </ol>
+    <div class="how-also">
+      <p><b>אסוציאציות.</b> כותבים לכל מילה טריק שעוזר לזכור, ורואים את הטריקים של משתמשים אחרים. 👍 למה שעובד, ⭐ למועדפים.</p>
+      <p><b>משתמש.</b> מתחברים, וההתקדמות נשמרת ומסונכרנת בין הטלפון למחשב.</p>
+    </div>
+    <button type="button" class="primary how-start" data-view="practice">להתחיל לתרגל</button>
+  </section>`;
+}
 function saveUI() { lsSet(LS_UI, ui); }
 function resetView() { for (const k in cache) delete cache[k]; listShown = PAGE; buildQueue(); render(); }
 
@@ -1167,7 +1220,7 @@ state = normalize(lsGet(LS_STATE));
 const savedUI = lsGet(LS_UI);
 if (savedUI && typeof savedUI === "object") {
   if (savedUI.lang === "en" || savedUI.lang === "he") ui.lang = savedUI.lang;
-  if (savedUI.view === "practice" || savedUI.view === "list") ui.view = savedUI.view;
+  if (["practice", "list", "how"].includes(savedUI.view)) ui.view = savedUI.view;
   if (typeof savedUI.unit === "string") ui.unit = savedUI.unit;
   if (savedUI.filter) for (const k of CHIP_ORDER) if (typeof savedUI.filter[k] === "boolean") ui.filter[k] = savedUI.filter[k];
   if (typeof savedUI.shuffle === "boolean") ui.shuffle = savedUI.shuffle;
