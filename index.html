@@ -1860,7 +1860,7 @@ async function loadCounts() {
     const [m, n] = await Promise.all([fb.count(fb.collection(fb.db, "members")), fb.count(fb.collection(fb.db, "noteIndex"))]);
     const users = m.data().count, notes = n.data().count, el = $("siteCounts");
     if (!users && !notes) return;
-    el.innerHTML = `<span>👥 ${users.toLocaleString("he-IL")} ${users === 1 ? "משתמשת רשומה" : "משתמשות רשומות"}</span><span>💬 ${notes.toLocaleString("he-IL")} ${notes === 1 ? "אסוציאציה פורסמה" : "אסוציאציות פורסמו"}</span>`;
+    el.innerHTML = `<span>👥 ${users.toLocaleString("he-IL")} ${users === 1 ? "משתמש רשום" : "משתמשים רשומים"}</span><span>💬 ${notes.toLocaleString("he-IL")} ${notes === 1 ? "אסוציאציה פורסמה" : "אסוציאציות פורסמו"}</span>`;
     el.hidden = false;
   } catch (e) {}
 }
