@@ -43,6 +43,7 @@ header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; backg
   border-radius: 99px; padding: 4px 12px 4px 6px; font-size: .85rem; font-weight: 700; }
 .how-link span { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--orange-soft); color: var(--orange); font-weight: 800; font-size: .8rem; }
 .how-link[aria-pressed="true"] { border-color: var(--orange); background: var(--orange-soft); }
+.home-link { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 10px; border-radius: 10px; }
 .brand h1 { margin: 0; font-family: var(--display); font-size: 1.6rem; font-weight: 700; line-height: 1.1; display: flex; align-items: center; gap: 10px; }
 .lights { display: inline-flex; flex-direction: column; gap: 3px; padding: 4px; border-radius: 8px; background: var(--ink); }
 .lights i { width: 7px; height: 7px; border-radius: 50%; display: block; }
@@ -253,7 +254,7 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
   <header>
     <div class="brand">
       <div class="title-row">
-        <h1><span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>רמזור מילים</h1>
+        <h1><a href="#" id="homeLink" class="home-link" aria-label="רמזור מילים, לדף הבית"><span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>רמזור מילים</a></h1>
         <button type="button" class="how-link" id="howBtn" data-view="how"><span aria-hidden="true">?</span>איך זה עובד</button>
       </div>
       <div class="seg-tabs" role="group" aria-label="שפה">
@@ -727,6 +728,12 @@ function resetView() { for (const k in cache) delete cache[k]; listShown = PAGE;
 
 /* ---------- Events ---------- */
 document.addEventListener("click", (e) => {
+  if (e.target.closest("#homeLink")) {
+    e.preventDefault();
+    const d = document.getElementById("acctDlg"); if (d && d.open) d.close();
+    ui.view = "practice"; saveUI(); render(); window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
   const t = e.target.closest("button"); if (!t || !DICT) return;
   if (t.dataset.lang) { ui.lang = t.dataset.lang; query = ""; saveUI(); resetView(); return; }
   if (t.dataset.view) { ui.view = t.dataset.view; saveUI(); render(); return; }
@@ -930,7 +937,7 @@ async function writeLang(lang) {
   if (wBusy[lang]) { wDirty[lang] = true; return; }
   wBusy[lang] = true;
   try {
-    await fb.setDoc(fb.doc(fb.db, "users", account.uid, "progress", lang), { p: state.p[lang], c: state.c[lang], t: Date.now() });
+    await fb.setDoc(fb.doc(fb.db, "users", account.uid, "progress", lang), { p: state.p[lang], c: state.c[lang], l: (state.l || {})[lang] || {}, t: Date.now() });
     localSyncText();
   } catch (e) { setSync("השמירה במשתמש לא הצליחה כרגע. ההתקדמות שמורה בדפדפן ותישלח שוב בשינוי הבא."); }
   wBusy[lang] = false;
@@ -988,6 +995,16 @@ async function loadFirebase() {
   return fb;
 }
 function mergeLang(lang, remote) {
+  if (state.l && remote.l) {   // daily log: keep the higher count per day and field
+    const L = (state.l[lang] = state.l[lang] || {});
+    for (const [day, r] of Object.entries(remote.l)) {
+      const d = (L[day] = L[day] || { n: 0, up: 0, nw: 0, t: {} });
+      for (const f of ["n", "up", "nw"]) d[f] = Math.max(d[f] || 0, r[f] || 0);
+      d.t = d.t || {};
+      for (const [k, v] of Object.entries(r.t || {})) d.t[k] = Math.max(d.t[k] || 0, v);
+      if (r.w) d.w = Object.assign({}, r.w, d.w || {});
+    }
+  }
   const p = { ...state.p[lang] };
   for (const [w, v] of Object.entries(remote.p)) p[w] = { ...(p[w] || {}), ...v };
   const seen = new Set(remote.c.map((x) => x.w));
@@ -1026,8 +1043,8 @@ async function startAccounts() {
         unsubs.push(fb.onSnapshot(fb.doc(fb.db, "users", u.uid, "progress", lang), (snap) => {
           if (snap.metadata.hasPendingWrites || !snap.exists() || writeBusy(lang) || isEditing()) return;
           const r = normLang(snap.data());
-          if (JSON.stringify(r) === JSON.stringify({ p: state.p[lang], c: state.c[lang] })) return;
-          state.p[lang] = r.p; state.c[lang] = r.c; lsSet(LS_STATE, state);
+          if (JSON.stringify({ p: r.p, c: r.c, l: r.l || {} }) === JSON.stringify({ p: state.p[lang], c: state.c[lang], l: (state.l || {})[lang] || {} })) return;
+          state.p[lang] = r.p; state.c[lang] = r.c; if (state.l) state.l[lang] = r.l || {}; lsSet(LS_STATE, state);
           if (ui.lang === lang) { if (ui.view === "practice") { for (const k in cache) delete cache[k]; renderHeader(); } else refreshAfterData(); }
         }, () => {}));
       }
@@ -1178,6 +1195,7 @@ if (FIREBASE_CONFIG) {
     : "בלי משתמש, האסוציאציות שלך נשמרות רק בדפדפן הזה. התחברו כדי לשמור אותן במשתמש ולשתף עם אחרים.";
   Assoc.canImage = () => !!account;
   Assoc.othersLocked = () => !account;
+  if (typeof Stats !== "undefined") Stats.enabled = () => !!account;   // progress tracking for signed-in users only
   Assoc.add = async (w, text, img) => {
     if (!account) return text ? localAdd(w, text) : false;
     try {
