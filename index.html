@@ -70,6 +70,17 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 .unit-opt small { margin-inline-start: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
 .unit-hint { margin: 0; font-size: .82rem; color: var(--accent); font-weight: 600; }
 .unit-actions { display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 6px; }
+.gr { cursor: pointer; }
+.gr:hover { background: var(--bg); }
+.wmodal { position: fixed; inset: 0; z-index: 60; background: rgb(0 0 0 / .45); display: grid; place-items: start center; overflow-y: auto;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 24px max(12px, env(safe-area-inset-left, 0px)); }
+.wm-box { width: min(560px, 100%); background: var(--bg); border-radius: 18px; padding: 12px; display: grid; gap: 10px; margin-top: 4vh; box-shadow: 0 20px 50px rgb(0 0 0 / .3); }
+.wm-top { display: flex; align-items: center; gap: 10px; }
+.wm-top .muted-note { margin-inline-start: auto; }
+.wm-close { border: 1px solid var(--line); background: var(--surface); border-radius: 50%; width: 32px; height: 32px; font-size: .9rem; }
+.wm-card .word { padding-block: 6px 2px; }
+.wm-card .reveal { min-height: 0; }
+body.modal-open { overflow: hidden; }
 .gsearch { position: relative; }
 .gsearch input { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; background: var(--surface); font-size: .95rem; }
 .gres { position: absolute; top: calc(100% + 6px); inset-inline: 0; z-index: 30; background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
@@ -469,6 +480,7 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
     <button type="button" class="link" id="shuffleBtn"></button>
   </div>
 
+  <div class="wmodal" id="wordModal" hidden><div class="wm-box" role="dialog" aria-modal="true" aria-label="המילה" id="wmBox"></div></div>
   <main id="main"><div class="empty"><h2>טוען את המילון…</h2></div></main>
 
   <footer>
@@ -744,6 +756,7 @@ function hintHTML(w) {
     : `<p class="assoc-empty">עוד אין לך אסוציאציות או מועדפים למילה הזו. אחרי הצגת הפירוש אפשר לכתוב אחת, או לסמן בכוכב אסוציאציה של מישהו אחר.</p>`}</div>`;
 }
 function refreshAssoc(w) {
+  if (modalWord === w && !$("wordModal").hidden && !document.querySelector("#wmBox .assoc")) renderWordModal();
   document.querySelectorAll(".assoc").forEach((el) => {
     if (el.dataset.w !== w) return;
     const draft = el.querySelector(".composer textarea").value;
@@ -796,6 +809,41 @@ function unitLabelText(set) {
   const base = set.has("mine") ? (txt ? txt + " + המילים שלי" : "המילים שלי") : txt;
   return [base, dayTxt].filter(Boolean).join(" + ");
 }
+/* word window (opened from the search) */
+let modalWord = null;
+function openWord(x) {
+  if (x.lang !== ui.lang) { ui.lang = x.lang; saveUI(); resetView(); }
+  modalWord = x.w;
+  $("gres").hidden = true;
+  Assoc.prefetch(x.w);
+  renderWordModal();
+  $("wordModal").hidden = false;
+  document.body.classList.add("modal-open");
+}
+function renderWordModal() {
+  if (!modalWord) return;
+  const x = allWords().find((y) => y.w === modalWord); if (!x) return closeWord();
+  const s = statusOf(x.w);
+  $("wmBox").innerHTML = `
+    <div class="wm-top"><span class="badge"><span class="dot s-${s}"></span>${s === "n" ? "מילה חדשה" : STATUS[s]}</span>
+      <span class="muted-note">${x.u ? "יחידה " + x.u : "המילים שלי"} · ${ui.lang === "en" ? "אנגלית" : "עברית"}</span>
+      <button type="button" class="wm-close" id="wmClose" aria-label="סגירה">✕</button></div>
+    <div class="card wm-card" data-s="${s}">
+      <div class="card-top"><span></span><span class="card-top-end">${speakBtn(x.w, true)}</span></div>
+      <div class="word${x.w.length > 16 ? " long" : ""}" dir="${dirOf()}" lang="${ui.lang}">${esc(x.w)}</div>
+      <div class="reveal"><div class="meaning">${meaningHTML(x.m)}</div></div>
+      ${assocHTML(x.w)}
+    </div>
+    <div class="rate">
+      <button type="button" class="g" data-wset="g" aria-current="${s === "g"}">יודעת<small>ירוק</small></button>
+      <button type="button" class="o" data-wset="o" aria-current="${s === "o"}">לא בטוחה<small>כתום</small></button>
+      <button type="button" class="r" data-wset="r" aria-current="${s === "r"}">לא יודעת<small>אדום</small></button>
+    </div>`;
+}
+function closeWord() {
+  modalWord = null; $("wordModal").hidden = true; document.body.classList.remove("modal-open");
+}
+
 /* site-wide search */
 function globalSearch(q) {
   const box = $("gres"), pq = plain(q.trim());
@@ -812,7 +860,7 @@ function globalSearch(q) {
   const shown = hits.slice(0, 15);
   box.innerHTML = shown.length ? shown.map((x, i) => {
     const st = statusOf(x.w, x.lang), canSay = x.lang === ui.lang ? canSpeak() : canSpeak(x.lang);
-    return `<div class="gr" data-gi="${i}">
+    return `<div class="gr" data-gi="${i}" title="פתיחת המילה">
       <div class="gr-main"><span class="dot s-${st}"></span><b dir="${x.lang === "en" ? "ltr" : "rtl"}">${esc(x.w)}</b>
         <span class="gr-tag">${x.lang === "en" ? "אנגלית" : "עברית"} · ${x.u ? "יחידה " + x.u : "המילים שלי"}</span>${canSay ? `<button type="button" class="speak small" data-speak-lang="${x.lang}" data-speak="${esc(x.w)}" aria-label="השמעת המילה">🔊</button>` : ""}</div>
       <div class="gr-m">${esc(x.m)}</div>
@@ -1313,6 +1361,18 @@ function resetView() { for (const k in cache) delete cache[k]; listShown = PAGE;
 
 /* ---------- Events ---------- */
 document.addEventListener("click", (e) => {
+  if (e.target.closest && e.target.closest("#wmClose")) { closeWord(); return; }
+  if (e.target.id === "wordModal") { closeWord(); return; }
+  const ws = e.target.closest && e.target.closest("[data-wset]");
+  if (ws && modalWord) {
+    const prev = statusOf(modalWord), next = ws.dataset.wset;
+    if (prev !== next) logRate(prev, next, 1, ui.lang, modalWord);
+    setEntry(modalWord, { s: next }); renderWordModal(); renderHeader();
+    if (ui.view === "practice") renderPractice(); else if (ui.view === "list") renderListRows();
+    return;
+  }
+  const gr = e.target.closest && e.target.closest(".gr");
+  if (gr && !e.target.closest("button")) { const x = $("gres")._hits[Number(gr.dataset.gi)]; if (x) openWord(x); return; }
   const gs = e.target.closest && e.target.closest("[data-gset]");
   if (gs) {
     const x = $("gres")._hits[Number(gs.closest(".gr").dataset.gi)];
@@ -1525,6 +1585,8 @@ document.addEventListener("submit", (e) => {
   $("addMsg").textContent = `"${w}" נוספה ל"המילים שלי".`;
 });
 document.addEventListener("keydown", (e) => {
+  if (modalWord && e.key === "Escape") { closeWord(); return; }
+  if (modalWord && !e.target.closest("textarea, input")) return;
   if (e.key === "Escape" && e.target.id === "gq") { e.target.value = ""; globalSearch(""); e.target.blur(); return; }
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "z" || e.key === "Z" || e.key === "ז") && !e.target.closest("textarea, input") && undoStack.length && ui.view === "practice") {
     e.preventDefault(); undoRate(); return;
@@ -1744,6 +1806,7 @@ async function fetchNotes(lang, w) {
 }
 function afterNotes(w, lang) {
   if (lang !== ui.lang || !DICT) return;
+  if (typeof modalWord !== "undefined" && modalWord === w) refreshAssoc(w);
   if (ui.view === "practice") {
     const cur = queue[pos];
     if (!cur || cur.w !== w) return;
