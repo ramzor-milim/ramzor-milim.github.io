@@ -103,6 +103,9 @@ kbd { font-family: var(--body); font-size: .72rem; border: 1px solid var(--line)
 .star { border: 0; background: none; padding: 0 2px; font-size: 1.15rem; line-height: 1; color: var(--muted); cursor: pointer; }
 .star[aria-pressed="true"] { color: var(--orange); }
 .note-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: start; }
+.notes .hidden-item { opacity: .6; }
+.note-meta button.hide-note { color: var(--muted); }
+.show-hidden { justify-self: start; font-size: .82rem; }
 .notes .fav-item { border-color: var(--orange); background: var(--orange-soft); }
 .note-actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: flex-end; }
 .vis { display: inline-flex; align-items: center; gap: 5px; }
@@ -296,6 +299,8 @@ function normLang(d) {
       if (Array.isArray(e.a) && !e.a.length) delete e.a;
       if (e.pa && !Array.isArray(e.pa)) delete e.pa;
       if (e.f && !Array.isArray(e.f)) delete e.f;
+      if (e.h && !Array.isArray(e.h)) delete e.h;
+      if (Array.isArray(e.h) && !e.h.length) delete e.h;
       if (Array.isArray(e.f) && !e.f.length) delete e.f;
       if (Array.isArray(e.pa) && !e.pa.length) delete e.pa;
     }
@@ -336,6 +341,7 @@ function setEntry(w, patch, lang = ui.lang) {
   if (!cur.a || !cur.a.length) delete cur.a;
   if (!cur.pa || !cur.pa.length) delete cur.pa;
   if (!cur.f || !cur.f.length) delete cur.f;
+  if (!cur.h || !cur.h.length) delete cur.h;
   if (!cur.s || cur.s === "n") delete cur.s;
   if (Object.keys(cur).length) state.p[lang][w] = cur; else delete state.p[lang][w];
   save(lang);
@@ -355,6 +361,14 @@ const Assoc = {
 const hasMine = (w) => Assoc.mine(w).length > 0 || (entry(w).f || []).length > 0;
 const favKey = (n) => n.text.trim();
 const favsOf = (w) => new Set(entry(w).f || []);
+const hiddenOf = (w) => new Set(entry(w).h || []);
+const showingHidden = new Set();   // words where the viewer opened their hidden list (this visit only)
+function setHidden(w, key, hide) {
+  const h = (entry(w).h || []).filter((k) => k !== key);
+  if (hide) h.push(key);
+  const f = (entry(w).f || []).filter((k) => !(hide && k === key));   // hiding also removes the star
+  setEntry(w, { h, f });
+}
 function toggleFav(w, key) {
   const f = (entry(w).f || []).slice(), i = f.indexOf(key);
   if (i >= 0) f.splice(i, 1); else f.push(key);
@@ -364,25 +378,37 @@ function noteHTML(n, kind, i, starred) {
   const star = `<button type="button" class="star" data-fav="${esc(favKey(n))}" aria-pressed="${starred}" aria-label="${starred ? "הסרה מהמועדפים" : "שמירה למועדפים"}" title="${starred ? "הסרה מהמועדפים" : "שמירה למועדפים"}">${starred ? "★" : "☆"}</button>`;
   const meta = kind === "mine"
     ? `<span class="vis" data-v="${n.vis || ""}">${esc(n.badge || "")}</span><span class="note-actions">${(n.actions || []).map((a) => `<button type="button" class="act-note" data-act="${a.key}" data-note="${esc(n.id)}">${a.label}</button>`).join("")}<button type="button" class="del-note" data-note="${esc(n.id)}">מחיקה</button></span>`
-    : `<span>${esc(n.name || "אנונימי")}</span><button type="button" class="copy-note" data-i="${i}">להעתיק אליי</button>`;
-  return `<li class="${kind === "mine" ? "mine-item" : ""}${starred ? " fav-item" : ""}"><span class="note-head"><span class="note-text">${esc(n.text)}</span>${star}</span>
+    : `<span>${esc(n.name || "אנונימי")}</span><span class="note-actions"><button type="button" class="copy-note" data-i="${i}">להעתיק אליי</button>${kind === "hidden"
+        ? `<button type="button" class="unhide-note" data-key="${esc(favKey(n))}">ביטול הסתרה</button>`
+        : `<button type="button" class="hide-note" data-key="${esc(favKey(n))}">הסתרה</button>`}</span>`;
+  return `<li class="${kind === "mine" ? "mine-item" : ""}${kind === "hidden" ? "hidden-item" : ""}${starred ? " fav-item" : ""}"><span class="note-head"><span class="note-text">${esc(n.text)}</span>${kind === "hidden" ? "" : star}</span>
     <span class="note-meta">${meta}</span></li>`;
 }
 function assocHTML(w) {
   const mine = Assoc.mine(w), others = Assoc.others(w), note = Assoc.note(), favs = favsOf(w);
   const isFav = (n) => favs.has(favKey(n));
+  const hidden = hiddenOf(w);
+  const isHidden = (n) => hidden.has(favKey(n));
+  const othersIdx = (others || []).map((n, i) => [n, i]);
+  const hiddenOthers = othersIdx.filter(([n]) => isHidden(n));
   const othersAll = others || [];
   const favItems = mine.filter(isFav).map((n) => noteHTML(n, "mine", 0, true))
-    .concat(othersAll.map((n, i) => [n, i]).filter(([n]) => isFav(n)).map(([n, i]) => noteHTML(n, "other", i, true)));
+    .concat(othersIdx.filter(([n]) => isFav(n) && !isHidden(n)).map(([n, i]) => noteHTML(n, "other", i, true)));
   const mineRest = mine.filter((n) => !isFav(n));
-  const othersRest = othersAll.map((n, i) => [n, i]).filter(([n]) => !isFav(n));
+  const othersRest = othersIdx.filter(([n]) => !isFav(n) && !isHidden(n));
+  const open = showingHidden.has(w);
+  const hiddenHTML = hiddenOthers.length
+    ? `<button type="button" class="link show-hidden">${hiddenOthers.length === 1 ? "אסוציאציה אחת מוסתרת" : hiddenOthers.length + " מוסתרות"} · ${open ? "להסתיר שוב" : "להציג"}</button>`
+      + (open ? `<ul class="notes">${hiddenOthers.map(([n, i]) => noteHTML(n, "hidden", i, false)).join("")}</ul>` : "")
+    : "";
   const mineHTML = mineRest.length
     ? `<ul class="notes">${mineRest.map((n) => noteHTML(n, "mine", 0, false)).join("")}</ul>`
     : `<p class="assoc-empty">${mine.length ? "כל האסוציאציות שלך במועדפים." : "עוד אין לך אסוציאציה למילה הזו."}</p>`;
   const othersHTML = others === null ? "" : `<h4>אסוציאציות של משתמשים אחרים${othersRest.length ? ` (${othersRest.length})` : ""}</h4>`
     + (othersRest.length
       ? `<ul class="notes">${othersRest.map(([n, i]) => noteHTML(n, "other", i, false)).join("")}</ul>`
-      : `<p class="assoc-empty">${othersAll.length ? "כל האסוציאציות של אחרים כבר במועדפים שלך." : "עוד אין אסוציאציות של אחרים למילה הזו."}</p>`);
+      : `<p class="assoc-empty">${othersAll.length ? "אין עוד אסוציאציות של אחרים להציג." : "עוד אין אסוציאציות של אחרים למילה הזו."}</p>`)
+    + hiddenHTML;
   return `<div class="assoc" data-w="${esc(w)}">
     <form class="composer">
       <textarea rows="1" aria-label="אסוציאציה חדשה" placeholder="אסוציאציה חדשה: מילה שנשמעת דומה, תמונה, משפט…"></textarea>
@@ -466,7 +492,7 @@ function renderPractice() {
     return;
   }
   const item = queue[pos], w = item.w;
-  const favTexts = [...favsOf(w)];
+  const favTexts = [...favsOf(w)].filter((k) => !hiddenOf(w).has(k));
   const s = statusOf(w), a = [...new Set(favTexts.concat(Assoc.mine(w).map((n) => n.text)))].join("\n");
   Assoc.prefetch(w);
   main.innerHTML = `
@@ -585,6 +611,18 @@ document.addEventListener("click", (e) => {
   if (t.dataset.fav !== undefined && t.classList.contains("star")) {
     const w = t.closest(".assoc").dataset.w;
     toggleFav(w, t.dataset.fav);
+    refreshAssoc(w);
+    return;
+  }
+  if (t.classList.contains("hide-note") || t.classList.contains("unhide-note")) {
+    const w = t.closest(".assoc").dataset.w;
+    setHidden(w, t.dataset.key, t.classList.contains("hide-note"));
+    refreshAssoc(w);
+    return;
+  }
+  if (t.classList.contains("show-hidden")) {
+    const w = t.closest(".assoc").dataset.w;
+    if (showingHidden.has(w)) showingHidden.delete(w); else showingHidden.add(w);
     refreshAssoc(w);
     return;
   }
