@@ -86,6 +86,8 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 kbd { font-family: var(--body); font-size: .72rem; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; color: var(--muted); background: var(--surface); }
 .meaning { font-size: 1.25rem; font-weight: 600; text-align: center; text-wrap: balance; }
 .meaning ol { margin: 0; padding: 0 1.2em 0 0; text-align: start; display: grid; gap: 4px; }
+.hint-box { display: grid; gap: 8px; }
+.hint-box h4 { margin: 0; font-size: .8rem; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
 .small-link { font-size: .82rem; font-weight: 600; color: var(--muted); padding: 2px; }
 .hint { margin: 0; color: var(--muted); font-style: italic; text-align: center; white-space: pre-wrap; }
 .assoc { display: grid; gap: 8px; }
@@ -435,6 +437,14 @@ function assocHTML(w) {
     ${othersHTML}
   </div>`;
 }
+/* hint before the meaning: only my favourites and my own associations */
+function hintHTML(w) {
+  const hidden = hiddenOf(w);
+  const items = [...new Set([...favsOf(w)].filter((k) => !hidden.has(k)).concat(Assoc.mine(w).map((n) => n.text)))];
+  return `<div class="hint-box">${items.length
+    ? `<h4>הרמזים שלי</h4><ul class="notes">${items.map((t) => `<li><span class="note-text">${esc(t)}</span></li>`).join("")}</ul>`
+    : `<p class="assoc-empty">עוד אין לך אסוציאציות או מועדפים למילה הזו. אחרי הצגת הפירוש אפשר לכתוב אחת, או לסמן בכוכב אסוציאציה של מישהו אחר.</p>`}</div>`;
+}
 function refreshAssoc(w) {
   document.querySelectorAll(".assoc").forEach((el) => {
     if (el.dataset.w !== w) return;
@@ -521,7 +531,7 @@ function renderPractice() {
                ? `<button type="button" class="link small-link" id="hideHintBtn">הסתרת האסוציאציות</button>`
                : `<button type="button" class="link small-link" id="hintBtn">הצגת אסוציאציות (רמז)</button>`}`}
       </div>
-      ${revealed || hint ? assocHTML(w) : ""}
+      ${revealed ? assocHTML(w) : hint ? hintHTML(w) : ""}
     </div>
     <div class="rate">
       <button type="button" class="r" data-rate="r" aria-current="${s === "r"}">לא יודע<small>אדום · 1</small></button>
