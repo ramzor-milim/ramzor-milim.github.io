@@ -509,6 +509,8 @@ const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } ca
 
 function normLang(d) {
   const o = { p: {}, c: [], l: {} };
+  if (d && d.g && typeof d.g === "object" && !Array.isArray(d.g)) o.g = JSON.parse(JSON.stringify(d.g));
+  if (d && d.pl && typeof d.pl === "object" && Array.isArray(d.pl.days)) o.pl = JSON.parse(JSON.stringify(d.pl));
   if (d && d.l && typeof d.l === "object" && !Array.isArray(d.l)) o.l = JSON.parse(JSON.stringify(d.l));
   if (!d || typeof d !== "object") return o;
   if (d.p && typeof d.p === "object") {
@@ -1056,6 +1058,15 @@ function planBoxHTML(P) {
       : `<div class="plan-btns"><button type="button" class="link" id="planOpen">לתרגל את יום 1</button><button type="button" class="link plan-reset" id="planReset">איפוס החלוקה</button></div>`}
   </div>`;
 }
+function applyRemoteGoals(lang, r) {
+  if (!r) return;
+  let changed = false;
+  if (r.g && (r.g._t || 0) > (ui.goals._t || 0)) { ui.goals = Object.assign({}, ui.goals, r.g); changed = true; }
+  const lp = ui.plans[lang];
+  if (r.pl && (r.pl.created || 0) > ((lp && lp.created) || 0)) { ui.plans[lang] = r.pl; changed = true; }
+  if (changed) { saveUI(); if (DICT) { renderHeader(); if (ui.view === "goals") renderGoals(); } }
+}
+function goalsChanged() { ui.goals._t = Date.now(); saveUI(); save(ui.lang); }
 function makePlan() {
   const P = goalPlan();
   if (!P.ok) return;
@@ -1064,11 +1075,13 @@ function makePlan() {
   const days = [];
   for (let i = 0; i < list.length; i += P.perDay) days.push(list.slice(i, i + P.perDay));
   ui.plans[ui.lang] = { size: P.perDay, created: Date.now(), days };
+  save(ui.lang);
   planMsg = `✓ נוצרו ${days.length} ימי לימוד. אפשר לבחור אותם בתפריט היחידות.`;
   saveUI(); renderHeader(); renderGoals();
 }
 function resetPlan() {
-  delete ui.plans[ui.lang];
+  ui.plans[ui.lang] = { size: 0, created: Date.now(), days: [] };   // an empty plan, so other devices learn about the reset
+  save(ui.lang);
   if (String(ui.unit).split(",").some((v) => v[0] === "d")) ui.unit = "1";
   planConfirm = false; planMsg = "החלוקה אופסה.";
   saveUI(); resetView();
@@ -1234,7 +1247,7 @@ document.addEventListener("click", (e) => {
   if (t.dataset.rate) { rate(t.dataset.rate); return; }
   if (t.id === "prevBtn") { pos = Math.max(0, pos - 1); revealed = false; hint = false; renderPractice(); return; }
   if (t.id === "undoBtn") { undoRate(); return; }
-  if (t.dataset.goalMode) { ui.goals.mode = t.dataset.goalMode; saveUI(); renderGoals(); return; }
+  if (t.dataset.goalMode) { ui.goals.mode = t.dataset.goalMode; goalsChanged(); renderGoals(); return; }
   if (t.id === "planMake") { makePlan(); return; }
   if (t.id === "planReset") { planConfirm = true; planMsg = ""; renderGoals(); return; }
   if (t.id === "planResetNo") { planConfirm = false; renderGoals(); return; }
@@ -1312,7 +1325,7 @@ document.addEventListener("toggle", (e) => {
 document.addEventListener("change", (e) => {
   if (e.target.classList && e.target.classList.contains("unit-cb")) { applyUnitChecks(); return; }
   const gmap = { gExam: ["exam", (v) => v], gPerWeek: ["perWeek", Number], gReview: ["review", Number], gRed: ["red", null], gManual: ["manual", (v) => Math.max(1, Math.min(1000, Number(v) || 1))], gManualPer: ["manualPer", (v) => v] };
-  if (gmap[e.target.id]) { const [k, f] = gmap[e.target.id]; ui.goals[k] = f ? f(e.target.value) : e.target.checked; saveUI(); renderGoals(); return; }
+  if (gmap[e.target.id]) { const [k, f] = gmap[e.target.id]; ui.goals[k] = f ? f(e.target.value) : e.target.checked; goalsChanged(); renderGoals(); return; }
 });
 let searchTimer = null;
 document.addEventListener("input", (e) => {
@@ -1437,7 +1450,7 @@ async function writeLang(lang) {
   if (wBusy[lang]) { wDirty[lang] = true; return; }
   wBusy[lang] = true;
   try {
-    await fb.setDoc(fb.doc(fb.db, "users", account.uid, "progress", lang), { p: state.p[lang], c: state.c[lang], l: (state.l || {})[lang] || {}, t: Date.now() });
+    await fb.setDoc(fb.doc(fb.db, "users", account.uid, "progress", lang), { p: state.p[lang], c: state.c[lang], l: (state.l || {})[lang] || {}, g: ui.goals || null, pl: (ui.plans || {})[lang] || null, t: Date.now() });
     localSyncText();
   } catch (e) { setSync("השמירה במשתמשת לא הצליחה כרגע. ההתקדמות שמורה בדפדפן ותישלח שוב בשינוי הבא."); }
   wBusy[lang] = false;
@@ -1495,6 +1508,7 @@ async function loadFirebase() {
   return fb;
 }
 function mergeLang(lang, remote) {
+  if (typeof applyRemoteGoals === "function") applyRemoteGoals(lang, remote);
   if (state.l && remote.l) {   // daily log: keep the higher count per day and field
     const L = (state.l[lang] = state.l[lang] || {});
     for (const [day, r] of Object.entries(remote.l)) {
@@ -1545,6 +1559,7 @@ async function startAccounts() {
         unsubs.push(fb.onSnapshot(fb.doc(fb.db, "users", u.uid, "progress", lang), (snap) => {
           if (snap.metadata.hasPendingWrites || !snap.exists() || writeBusy(lang) || isEditing()) return;
           const r = normLang(snap.data());
+          if (typeof applyRemoteGoals === "function") applyRemoteGoals(lang, r);
           if (JSON.stringify({ p: r.p, c: r.c, l: r.l || {} }) === JSON.stringify({ p: state.p[lang], c: state.c[lang], l: (state.l || {})[lang] || {} })) return;
           state.p[lang] = r.p; state.c[lang] = r.c; if (state.l) state.l[lang] = r.l || {}; lsSet(LS_STATE, state);
           if (ui.lang === lang) { if (ui.view === "practice") { for (const k in cache) delete cache[k]; renderHeader(); } else refreshAfterData(); }
