@@ -116,7 +116,8 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 .speak { border: 1px solid var(--line); background: var(--surface); border-radius: 50%; width: 42px; height: 42px; flex: none; font-size: 1.1rem; display: grid; place-items: center; }
 .speak:hover { background: var(--bg); }
 .speak.on { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
-.speak.small { width: 26px; height: 26px; font-size: .75rem; margin-inline-start: 6px; vertical-align: middle; display: inline-grid; }
+.speak.small { width: 28px; height: 28px; font-size: .78rem; vertical-align: middle; display: inline-grid; flex: none; }
+.card-top-end { display: inline-flex; align-items: center; gap: 8px; }
 .word.long { font-size: clamp(1.5rem, 6vw, 2.1rem); }
 .reveal { display: grid; justify-items: center; gap: 8px; min-height: 92px; align-content: center; }
 .btn-reveal { border: 1.5px dashed var(--line); background: var(--bg); border-radius: 12px; padding: 12px 22px; font-weight: 600; color: var(--ink); width: 100%; }
@@ -373,7 +374,7 @@ input[type="search"], input[type="text"] { width: 100%; border: 1px solid var(--
 .list { display: grid; gap: 6px; }
 .list-meta { color: var(--muted); font-size: .85rem; margin: 0 0 4px; font-variant-numeric: tabular-nums; }
 .row { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
-.row summary { list-style: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; }
+.row summary { list-style: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; }
 .row summary::-webkit-details-marker { display: none; }
 .row .w { font-family: var(--display); font-weight: 700; font-size: 1.1rem; }
 .row .m { color: var(--muted); font-size: .9rem; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -808,8 +809,8 @@ function globalSearch(q) {
   box.innerHTML = shown.length ? shown.map((x, i) => {
     const st = statusOf(x.w, x.lang), canSay = x.lang === ui.lang ? canSpeak() : canSpeak(x.lang);
     return `<div class="gr" data-gi="${i}">
-      <div class="gr-main"><span class="dot s-${st}"></span><b dir="${x.lang === "en" ? "ltr" : "rtl"}">${esc(x.w)}</b>${canSay ? `<button type="button" class="speak small" data-speak-lang="${x.lang}" data-speak="${esc(x.w)}" aria-label="השמעת המילה">🔊</button>` : ""}
-        <span class="gr-tag">${x.lang === "en" ? "אנגלית" : "עברית"} · ${x.u ? "יחידה " + x.u : "המילים שלי"}</span></div>
+      <div class="gr-main"><span class="dot s-${st}"></span><b dir="${x.lang === "en" ? "ltr" : "rtl"}">${esc(x.w)}</b>
+        <span class="gr-tag">${x.lang === "en" ? "אנגלית" : "עברית"} · ${x.u ? "יחידה " + x.u : "המילים שלי"}</span>${canSay ? `<button type="button" class="speak small" data-speak-lang="${x.lang}" data-speak="${esc(x.w)}" aria-label="השמעת המילה">🔊</button>` : ""}</div>
       <div class="gr-m">${esc(x.m)}</div>
       <div class="seg gr-seg">${["g", "o", "r"].map((k) => `<button type="button" data-gset="${k}" data-s="${k}" aria-pressed="${st === k}"><span class="dot s-${k}"></span>${STATUS[k]}</button>`).join("")}</div>
     </div>`;
@@ -891,8 +892,8 @@ function renderPractice() {
   main.innerHTML = `
     <div class="card" data-s="${s}">
       <div class="card-top"><span>${pos + 1} / ${queue.length}${item.u ? ` · יחידה ${item.u}` : " · מילה שלי"}</span>
-        <span class="badge"><span class="dot s-${s}"></span>${s === "n" ? "מילה חדשה" : STATUS[s]}</span></div>
-      <div class="word-row"><div class="word${w.length > 16 ? " long" : ""}" dir="${dirOf()}" lang="${ui.lang}">${esc(w)}</div>${speakBtn(w)}</div>
+        <span class="card-top-end"><span class="badge"><span class="dot s-${s}"></span>${s === "n" ? "מילה חדשה" : STATUS[s]}</span>${speakBtn(w, true)}</span></div>
+      <div class="word${w.length > 16 ? " long" : ""}" dir="${dirOf()}" lang="${ui.lang}">${esc(w)}</div>
       <div class="reveal">
         ${revealed ? `<div class="meaning">${meaningHTML(item.m)}</div>
              <button type="button" class="link small-link" id="hideMeaningBtn">הסתרת הפירוש</button>`
@@ -987,8 +988,8 @@ function rowHTML(x, i) {
   const s = statusOf(x.w), a = hasMine(x.w);
   return `<details class="row" data-i="${i}">
     <summary><span class="dot s-${s}"></span>
-      <span style="min-width:0"><span class="w" dir="${dirOf()}">${esc(x.w)}</span>${speakBtn(x.w, true)}<span class="m">${esc(x.m)}</span></span>
-      <span class="${a ? "has-a" : ""}">${a ? "יש אסוציאציה" : ""}</span></summary></details>`;
+      <span style="min-width:0"><span class="w" dir="${dirOf()}">${esc(x.w)}</span><span class="m">${esc(x.m)}</span></span>
+      <span class="${a ? "has-a" : ""}">${a ? "יש אסוציאציה" : ""}</span>${speakBtn(x.w, true) || "<span></span>"}</summary></details>`;
 }
 function rowBodyHTML(x) {
   const s = statusOf(x.w);
