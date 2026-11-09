@@ -1827,6 +1827,9 @@ if (savedUI && typeof savedUI === "object") {
   if (["practice", "list", "how", "stats", "goals"].includes(savedUI.view)) ui.view = savedUI.view;
   if (savedUI.goals && typeof savedUI.goals === "object") ui.goals = Object.assign(ui.goals, savedUI.goals);
   if (savedUI.plans && typeof savedUI.plans === "object") ui.plans = savedUI.plans;
+  // goals saved before syncing existed have no timestamp: stamp them so other devices accept them
+  if (!ui.goals._t && (ui.goals.exam || ui.goals.mode === "manual")) ui.goals._t = 1;
+  for (const l of ["en", "he"]) { const pl = ui.plans[l]; if (pl && Array.isArray(pl.days) && !pl.created) pl.created = 1; }
   if (typeof savedUI.unit === "string") ui.unit = savedUI.unit;
   if (savedUI.filter) for (const k of CHIP_ORDER) if (typeof savedUI.filter[k] === "boolean") ui.filter[k] = savedUI.filter[k];
   if (typeof savedUI.shuffle === "boolean") ui.shuffle = savedUI.shuffle;
