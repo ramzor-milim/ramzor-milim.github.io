@@ -117,7 +117,9 @@ kbd { font-family: var(--body); font-size: .72rem; border: 1px solid var(--line)
 .notes .hidden-item { opacity: .6; }
 .head-actions { display: inline-flex; align-items: center; gap: 6px; }
 .like { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 1px 9px; font-size: .8rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
-.like[aria-pressed="true"] { color: var(--red); border-color: var(--red); background: var(--red-soft); }
+.like .thumb { filter: grayscale(1); opacity: .7; }
+.like[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--new-soft); }
+.like[aria-pressed="true"] .thumb { filter: none; opacity: 1; }
 .likes-own { font-size: .8rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
 .note-meta button.hide-note { color: var(--muted); }
 .show-hidden { justify-self: start; font-size: .82rem; }
@@ -402,8 +404,8 @@ function noteHTML(n, kind, i, starred) {
         : `<button type="button" class="hide-note" data-key="${esc(favKey(n))}">הסתרה</button>`}</span>`;
   const likes = n.likeCount === undefined || kind === "hidden" ? ""
     : kind === "mine"
-      ? `<span class="likes-own" title="לייקים">♥ ${n.likeCount}</span>`
-      : `<button type="button" class="like" data-like="${esc(n.id)}" aria-pressed="${!!n.liked}" aria-label="${n.liked ? "ביטול לייק" : "לייק"}" title="${n.liked ? "ביטול לייק" : "לייק"}">${n.liked ? "♥" : "♡"} ${n.likeCount}</button>`;
+      ? `<span class="likes-own" title="לייקים">👍 ${n.likeCount}</span>`
+      : `<button type="button" class="like" data-like="${esc(n.id)}" aria-pressed="${!!n.liked}" aria-label="${n.liked ? "ביטול לייק" : "לייק"}" title="${n.liked ? "ביטול לייק" : "לייק"}"><span class="thumb">👍</span> ${n.likeCount}</button>`;
   return `<li class="${kind === "mine" ? "mine-item" : ""}${kind === "hidden" ? "hidden-item" : ""}${starred ? " fav-item" : ""}"><span class="note-head"><span class="note-text">${esc(n.text)}${imgHTML(n.img)}</span><span class="head-actions">${likes}${kind === "hidden" ? "" : star}</span></span>
     <span class="note-meta">${meta}</span></li>`;
 }
