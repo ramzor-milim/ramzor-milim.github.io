@@ -118,6 +118,8 @@ kbd { font-family: var(--body); font-size: .72rem; border: 1px solid var(--line)
 .how-also p { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.55; }
 .how-also b { color: var(--ink); }
 .how-start { justify-self: start; }
+.locked { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.locked .link { font-size: .82rem; }
 .undo-bar { margin-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
   background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; font-size: .9rem; color: var(--muted); }
 .undo-bar b { color: var(--ink); }
@@ -406,6 +408,7 @@ const Assoc = {
   act: async () => false,       // visibility changes (public build only)
   like: async () => false,      // toggle a like (public build only); returns true, false, or "signin"
   canImage: () => false,        // images need an account (public build only)
+  othersLocked: () => false,    // true when other users' associations need sign-in
   others: () => null,           // [{text, name}], or null when sharing isn't available
   note: () => "",
   prefetch: () => {}
@@ -465,7 +468,9 @@ function assocHTML(w) {
   const mineHTML = mineRest.length
     ? `<ul class="notes">${mineRest.map((n) => noteHTML(n, "mine", 0, false)).join("")}</ul>`
     : `<p class="assoc-empty">${mine.length ? "כל האסוציאציות שלך במועדפים." : "עוד אין לך אסוציאציה למילה הזו."}</p>`;
-  const othersHTML = others === null ? "" : `<h4>אסוציאציות של משתמשים אחרים${othersRest.length ? ` (${othersRest.length})` : ""}</h4>`
+  const othersHTML = Assoc.othersLocked()
+    ? `<h4>אסוציאציות של משתמשים אחרים</h4><p class="assoc-empty locked">🔒 אסוציאציות של משתמשים אחרים זמינות למשתמשים רשומים. <button type="button" class="link signup-link">להתחברות או הרשמה</button></p>`
+    : others === null ? "" : `<h4>אסוציאציות של משתמשים אחרים${othersRest.length ? ` (${othersRest.length})` : ""}</h4>`
     + (othersRest.length
       ? `<ul class="notes">${othersRest.map(([n, i]) => noteHTML(n, "other", i, false)).join("")}</ul>`
       : `<p class="assoc-empty">${othersAll.length ? "אין עוד אסוציאציות של אחרים להציג." : "עוד אין אסוציאציות של אחרים למילה הזו."}</p>`)
@@ -734,6 +739,7 @@ document.addEventListener("click", (e) => {
   if (t.dataset.rate) { rate(t.dataset.rate); return; }
   if (t.id === "prevBtn") { pos = Math.max(0, pos - 1); revealed = false; hint = false; renderPractice(); return; }
   if (t.id === "undoBtn") { undoRate(); return; }
+  if (t.classList.contains("signup-link")) { const a = document.getElementById("acctBtn"); if (a && !a.hidden) a.click(); return; }
   if (t.id === "nextBtn") { pos++; revealed = false; hint = false; renderPractice(); return; }
   if (t.id === "againBtn") { buildQueue(); renderPractice(); return; }
   if (t.id === "moreBtn") { listShown += PAGE; renderListRows(); return; }
@@ -1171,6 +1177,7 @@ if (FIREBASE_CONFIG) {
     ? `אסוציאציה חדשה גלויה לכולם בשם ${esc(account.shareName)}. לכל אסוציאציה אפשר לבחור להפוך לאנונימית או להסתיר מכולם.`
     : "בלי משתמש, האסוציאציות שלך נשמרות רק בדפדפן הזה. התחברו כדי לשמור אותן במשתמש ולשתף עם אחרים.";
   Assoc.canImage = () => !!account;
+  Assoc.othersLocked = () => !account;
   Assoc.add = async (w, text, img) => {
     if (!account) return text ? localAdd(w, text) : false;
     try {
@@ -1196,6 +1203,7 @@ if (FIREBASE_CONFIG) {
     } catch (e) { return false; }
   };
   Assoc.prefetch = (w) => {
+    if (!account) return;   // other users' associations are for signed-in users
     const lang = ui.lang, k = ck(w, lang);
     if (notesCache[k] || notesLoading[k]) return;
     notesLoading[k] = true;
