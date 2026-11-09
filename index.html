@@ -86,9 +86,23 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 kbd { font-family: var(--body); font-size: .72rem; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; color: var(--muted); background: var(--surface); }
 .meaning { font-size: 1.25rem; font-weight: 600; text-align: center; text-wrap: balance; }
 .meaning ol { margin: 0; padding: 0 1.2em 0 0; text-align: start; display: grid; gap: 4px; }
-.hint { margin: 0; color: var(--muted); font-style: italic; text-align: center; }
-.assoc { display: grid; gap: 6px; }
-.assoc label, .row-body label { font-size: .8rem; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
+.hint { margin: 0; color: var(--muted); font-style: italic; text-align: center; white-space: pre-wrap; }
+.assoc { display: grid; gap: 8px; }
+.assoc h4 { margin: 6px 0 0; font-size: .8rem; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
+.composer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+.composer textarea { min-height: 44px; }
+.composer button { border: 0; background: var(--accent); color: var(--accent-ink); border-radius: 10px; padding: 10px 16px; font-weight: 700; }
+.composer button:disabled { opacity: .45; cursor: default; }
+.notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.notes li { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; }
+.notes .mine-item { border-color: var(--accent); }
+.note-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.note-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .78rem; color: var(--muted); }
+.note-meta button { border: 0; background: none; color: var(--accent); font-weight: 700; padding: 2px 0; font-size: .78rem; }
+.note-meta button.del-note { color: var(--red); }
+.assoc-empty, .assoc-note { margin: 0; font-size: .82rem; color: var(--muted); }
+.assoc-msg { margin: 0; font-size: .82rem; color: var(--red); font-weight: 600; }
+.assoc-msg:empty { display: none; }
 textarea { width: 100%; min-height: 64px; resize: vertical; border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; background: var(--bg); line-height: 1.45; }
 textarea::placeholder, input::placeholder { color: var(--muted); opacity: .8; }
 
@@ -170,17 +184,6 @@ dialog .google svg { width: 18px; height: 18px; flex: none; }
 dialog .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .82rem; margin-block: 4px; }
 dialog .or::before, dialog .or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
 
-.save-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.save-assoc { border: 0; background: var(--accent); color: var(--accent-ink); border-radius: 10px; padding: 8px 18px; font-weight: 700; }
-.save-assoc:disabled { opacity: .45; cursor: default; }
-.save-status { font-size: .85rem; color: var(--green); font-weight: 600; }
-.others { display: grid; gap: 6px; margin-top: 4px; }
-.others h4 { margin: 4px 0 0; font-size: .8rem; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
-.others .note-item { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; }
-.others .note-text { white-space: pre-wrap; overflow-wrap: anywhere; }
-.others .note-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .78rem; color: var(--muted); }
-.others .note-meta button { border: 0; background: none; color: var(--accent); font-weight: 700; padding: 2px 0; font-size: .78rem; }
-.others .hint-line { margin: 0; font-size: .8rem; color: var(--muted); }
 dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: default; }
 </style>
 </head>
@@ -273,7 +276,16 @@ const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } ca
 function normLang(d) {
   const o = { p: {}, c: [] };
   if (!d || typeof d !== "object") return o;
-  if (d.p && typeof d.p === "object") o.p = JSON.parse(JSON.stringify(d.p));
+  if (d.p && typeof d.p === "object") {
+    o.p = JSON.parse(JSON.stringify(d.p));
+    for (const k in o.p) {
+      const e = o.p[k];
+      if (!e || typeof e !== "object") { delete o.p[k]; continue; }
+      if (typeof e.a === "string") e.a = e.a.trim() ? [e.a] : [];
+      else if (e.a && !Array.isArray(e.a)) e.a = [];
+      if (Array.isArray(e.a) && !e.a.length) delete e.a;
+    }
+  }
   if (Array.isArray(d.c)) o.c = d.c.filter((x) => x && x.w).map((x) => ({ w: String(x.w), m: String(x.m || "") }));
   return o;
 }
@@ -304,15 +316,61 @@ function words(lang = ui.lang) {
 }
 const entry = (w, lang = ui.lang) => state.p[lang][w] || {};
 const statusOf = (w, lang = ui.lang) => entry(w, lang).s || "n";
-const assocOf = (w, lang = ui.lang) => entry(w, lang).a || "";
+const localMine = (w, lang = ui.lang) => (entry(w, lang).a || []).map((text, i) => ({ id: String(i), text }));
 function setEntry(w, patch, lang = ui.lang) {
   const cur = { ...entry(w, lang), ...patch };
-  if (!cur.a) delete cur.a;
+  if (!cur.a || !cur.a.length) delete cur.a;
   if (!cur.s || cur.s === "n") delete cur.s;
   if (Object.keys(cur).length) state.p[lang][w] = cur; else delete state.p[lang][w];
   save(lang);
 }
 const dirOf = () => (ui.lang === "en" ? "ltr" : "rtl");
+
+/* Associations: a list per word. Local by default; the public build swaps in shared storage. */
+const Assoc = {
+  mine: (w) => localMine(w),
+  add: async (w, text) => { setEntry(w, { a: (entry(w).a || []).concat(text) }); return true; },
+  remove: async (w, id) => { const a = (entry(w).a || []).slice(); a.splice(Number(id), 1); setEntry(w, { a }); return true; },
+  others: () => null,           // [{text, name}], or null when sharing isn't available
+  note: () => "",
+  prefetch: () => {}
+};
+const hasMine = (w) => Assoc.mine(w).length > 0;
+function assocHTML(w) {
+  const mine = Assoc.mine(w), others = Assoc.others(w), note = Assoc.note();
+  const mineHTML = mine.length
+    ? `<ul class="notes">${mine.map((n) => `<li class="mine-item"><span class="note-text">${esc(n.text)}</span>
+        <span class="note-meta"><span></span><button type="button" class="del-note" data-note="${esc(n.id)}">מחיקה</button></span></li>`).join("")}</ul>`
+    : `<p class="assoc-empty">עוד אין לך אסוציאציה למילה הזו.</p>`;
+  const othersHTML = others === null ? "" : `<h4>אסוציאציות של משתמשים אחרים${others.length ? ` (${others.length})` : ""}</h4>`
+    + (others.length
+      ? `<ul class="notes">${others.map((n, i) => `<li><span class="note-text">${esc(n.text)}</span>
+          <span class="note-meta"><span>${esc(n.name || "משתמש")}</span><button type="button" class="copy-note" data-i="${i}">להעתיק אליי</button></span></li>`).join("")}</ul>`
+      : `<p class="assoc-empty">עוד אין אסוציאציות של אחרים למילה הזו.</p>`);
+  return `<div class="assoc" data-w="${esc(w)}">
+    <form class="composer">
+      <textarea rows="1" aria-label="אסוציאציה חדשה" placeholder="אסוציאציה חדשה: מילה שנשמעת דומה, תמונה, משפט…"></textarea>
+      <button type="submit">שמירה</button>
+    </form>
+    <p class="assoc-msg" role="alert"></p>
+    <h4>האסוציאציות שלי</h4>
+    ${mineHTML}
+    ${note ? `<p class="assoc-note">${note}</p>` : ""}
+    ${othersHTML}
+  </div>`;
+}
+function refreshAssoc(w) {
+  document.querySelectorAll(".assoc").forEach((el) => {
+    if (el.dataset.w !== w) return;
+    const draft = el.querySelector(".composer textarea").value;
+    const tmp = document.createElement("div");
+    tmp.innerHTML = assocHTML(w);
+    const fresh = tmp.firstElementChild;
+    fresh.querySelector(".composer textarea").value = draft;
+    el.replaceWith(fresh);
+  });
+  if (ui.view === "list") document.querySelectorAll(".row").forEach((r) => { const x = listItems[Number(r.dataset.i)]; if (x && x.w === w) updateRow(r); });
+}
 
 /* ---------- Header ---------- */
 function counts() {
@@ -371,7 +429,8 @@ function renderPractice() {
     return;
   }
   const item = queue[pos], w = item.w;
-  const s = statusOf(w), a = assocOf(w);
+  const s = statusOf(w), a = Assoc.mine(w).map((n) => n.text).join("\n");
+  Assoc.prefetch(w);
   main.innerHTML = `
     <div class="card" data-s="${s}">
       <div class="card-top"><span>${pos + 1} / ${queue.length}${item.u ? ` · יחידה ${item.u}` : " · מילה שלי"}</span>
@@ -383,8 +442,7 @@ function renderPractice() {
              ${a && !hint ? `<button type="button" class="link" id="hintBtn">רמז מהאסוציאציה שלי</button>` : ""}
              ${a && hint ? `<p class="hint">${esc(a)}</p>` : ""}`}
       </div>
-      ${revealed ? `<div class="assoc"><label for="assoc">האסוציאציה שלי</label>
-        <textarea id="assoc" data-w="${esc(w)}" placeholder="משהו שיעזור לזכור: מילה שנשמעת דומה, תמונה, משפט…">${esc(a)}</textarea></div>` : ""}
+      ${revealed ? assocHTML(w) : ""}
     </div>
     <div class="rate">
       <button type="button" class="r" data-rate="r" aria-current="${s === "r"}">לא יודע<small>אדום · 1</small></button>
@@ -405,18 +463,18 @@ function rate(s) {
 
 /* ---------- List ---------- */
 function rowHTML(x, i) {
-  const s = statusOf(x.w), a = assocOf(x.w);
+  const s = statusOf(x.w), a = hasMine(x.w);
   return `<details class="row" data-i="${i}">
     <summary><span class="dot s-${s}"></span>
       <span style="min-width:0"><span class="w" dir="${dirOf()}">${esc(x.w)}</span><span class="m">${esc(x.m)}</span></span>
       <span class="${a ? "has-a" : ""}">${a ? "יש אסוציאציה" : ""}</span></summary></details>`;
 }
 function rowBodyHTML(x) {
-  const s = statusOf(x.w), a = assocOf(x.w);
+  const s = statusOf(x.w);
+  Assoc.prefetch(x.w);
   return `<div class="row-body">
       <div class="seg">${["r", "o", "g", "n"].map((k) => `<button type="button" data-set="${k}" data-s="${k}" aria-pressed="${s === k}"><span class="dot s-${k}"></span>${k === "n" ? "לא מסווג" : STATUS[k]}</button>`).join("")}</div>
-      <label>האסוציאציה שלי</label>
-      <textarea data-w="${esc(x.w)}" placeholder="משהו שיעזור לזכור את המילה">${esc(a)}</textarea>
+      ${assocHTML(x.w)}
       ${x.custom ? `<button type="button" class="del" data-del="${esc(x.w)}">מחיקת המילה</button>` : ""}
     </div>`;
 }
@@ -451,7 +509,7 @@ function renderList() {
 function rowOf(el) { const r = el.closest(".row"); return r ? listItems[Number(r.dataset.i)] : null; }
 function updateRow(rowEl) {
   const x = listItems[Number(rowEl.dataset.i)]; if (!x) return;
-  const s = statusOf(x.w), a = assocOf(x.w);
+  const s = statusOf(x.w), a = hasMine(x.w);
   rowEl.querySelector("summary .dot").className = "dot s-" + s;
   rowEl.querySelectorAll("[data-set]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.set === s));
   const tag = rowEl.querySelector("summary > span:last-child");
@@ -477,6 +535,20 @@ document.addEventListener("click", (e) => {
   if (t.id === "nextBtn") { pos++; revealed = false; hint = false; renderPractice(); return; }
   if (t.id === "againBtn") { buildQueue(); renderPractice(); return; }
   if (t.id === "moreBtn") { listShown += PAGE; renderListRows(); return; }
+  if (t.classList.contains("del-note")) {
+    const w = t.closest(".assoc").dataset.w;
+    t.disabled = true;
+    Assoc.remove(w, t.dataset.note).then((ok) => {
+      if (ok) refreshAssoc(w);
+      else { t.disabled = false; t.closest(".assoc").querySelector(".assoc-msg").textContent = "המחיקה לא הצליחה. נסו שוב."; }
+    });
+    return;
+  }
+  if (t.classList.contains("copy-note")) {
+    const box = t.closest(".assoc"), n = (Assoc.others(box.dataset.w) || [])[Number(t.dataset.i)];
+    if (n) { const ta = box.querySelector(".composer textarea"); ta.value = n.text; ta.focus(); }
+    return;
+  }
   if (t.dataset.set) { const x = rowOf(t); if (!x) return; setEntry(x.w, { s: t.dataset.set }); updateRow(t.closest(".row")); renderHeader(); return; }
   if (t.dataset.del) {
     const w = t.dataset.del;
@@ -495,16 +567,24 @@ document.addEventListener("change", (e) => {
 });
 let searchTimer = null;
 document.addEventListener("input", (e) => {
-  if (e.target.tagName === "TEXTAREA" && e.target.dataset.w) {
-    setEntry(e.target.dataset.w, { a: e.target.value.trim() ? e.target.value : "" });
-    const row = e.target.closest(".row"); if (row) updateRow(row);
-  }
   if (e.target.id === "search") {
     query = e.target.value; listShown = PAGE;
     clearTimeout(searchTimer); searchTimer = setTimeout(renderListRows, 200);
   }
 });
+async function submitAssoc(form) {
+  const box = form.closest(".assoc"), w = box.dataset.w, ta = form.querySelector("textarea"), btn = form.querySelector("button");
+  const text = ta.value.trim();
+  if (!text) { ta.focus(); return; }
+  btn.disabled = true;
+  const ok = await Assoc.add(w, text.slice(0, 500));
+  btn.disabled = false;
+  if (!ok) { box.querySelector(".assoc-msg").textContent = "השמירה לא הצליחה. בדקו את החיבור לאינטרנט ונסו שוב."; return; }
+  ta.value = "";
+  refreshAssoc(w);
+}
 document.addEventListener("submit", (e) => {
+  if (e.target.classList.contains("composer")) { e.preventDefault(); submitAssoc(e.target); return; }
   if (e.target.id !== "addForm") return;
   e.preventDefault();
   const w = $("newWord").value.trim(), m = $("newMeaning").value.trim();
@@ -517,6 +597,9 @@ document.addEventListener("submit", (e) => {
   $("addMsg").textContent = `"${w}" נוספה ל"המילים שלי".`;
 });
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.target.closest(".composer") && matchMedia("(hover: hover)").matches) {
+    e.preventDefault(); submitAssoc(e.target.closest(".composer")); return;
+  }
   if (!DICT || ui.view !== "practice" || e.target.closest("textarea, input, select") || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key === " " || e.key === "Enter") { if (e.target.closest("button")) return; e.preventDefault(); if (!revealed && pos < queue.length) { revealed = true; renderPractice(); } }
   else if (e.key === "1") rate("r"); else if (e.key === "2") rate("o"); else if (e.key === "3") rate("g");
@@ -628,6 +711,7 @@ async function startAccounts() {
         if (snap.exists()) mergeLang(lang, normLang(snap.data()));
       }
       lsSet(LS_STATE, state);
+      await migrateLocalAssoc();
       refreshAfterData();
       await Promise.all(LANGS.map(writeLang));
       for (const lang of LANGS) {
@@ -690,93 +774,85 @@ document.addEventListener("submit", async (e) => {
   $("loginBtn").disabled = $("signupBtn").disabled = false;
 });
 
-/* shared associations: every signed-in user's association is visible to everyone */
-const notesCache = {};
+/* shared associations: a comment-style list per word; signed-in users' notes are visible to everyone */
+const notesCache = {}, notesLoading = {};
 const noteKey = (w) => encodeURIComponent(w).replace(/\./g, "%2E");
 const notesCol = (lang, w) => fb.collection(fb.db, "shared", lang, "words", noteKey(w), "notes");
-const shareTimers = {};
-async function shareAssoc(lang, w, text) {
-  if (!account || !fb) return false;
-  const ref = fb.doc(notesCol(lang, w), account.uid);
-  const t = text.trim().slice(0, 500);
-  try {
-    if (t) await fb.setDoc(ref, { text: t, name: account.shareName.slice(0, 40), t: Date.now() });
-    else await fb.deleteDoc(ref);
-    return true;
-  } catch (e) { return false; }
-}
-async function loadNotes(lang, w, box) {
-  if (!FIREBASE_CONFIG || !box) return;
-  const k = lang + "|" + w;
+const ck = (w, lang = ui.lang) => lang + "|" + w;
+const localAdd = Assoc.add, localRemove = Assoc.remove;
+function newNote(text) { return { uid: account.uid, text: String(text).trim().slice(0, 500), name: account.shareName.slice(0, 40), t: Date.now() }; }
+async function fetchNotes(lang, w) {
+  const k = ck(w, lang);
   try {
     await loadFirebase();
-    if (!notesCache[k]) {
-      const snap = await fb.getDocs(fb.query(notesCol(lang, w), fb.orderBy("t", "desc"), fb.limit(30)));
-      notesCache[k] = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+    const snap = await fb.getDocs(fb.query(notesCol(lang, w), fb.orderBy("t", "desc"), fb.limit(60)));
+    notesCache[k] = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (e) { notesCache[k] = []; }
+}
+function afterNotes(w, lang) {
+  if (lang !== ui.lang || !DICT) return;
+  if (ui.view === "practice") {
+    const cur = queue[pos];
+    if (!cur || cur.w !== w) return;
+    if (revealed) refreshAssoc(w); else if (hasMine(w)) renderPractice();
+  } else refreshAssoc(w);
+}
+if (FIREBASE_CONFIG) {
+  Assoc.mine = (w) => account
+    ? (notesCache[ck(w)] || []).filter((n) => n.uid === account.uid).map((n) => ({ id: n.id, text: n.text }))
+    : localMine(w);
+  Assoc.others = (w) => (notesCache[ck(w)] || []).filter((n) => !account || n.uid !== account.uid);
+  Assoc.note = () => account
+    ? `האסוציאציות שלך גלויות לכל המשתמשים, עם השם ${esc(account.shareName)}.`
+    : "בלי משתמש, האסוציאציות שלך נשמרות רק בדפדפן הזה. התחברו כדי לשמור אותן במשתמש ולשתף עם אחרים.";
+  Assoc.add = async (w, text) => {
+    if (!account) return localAdd(w, text);
+    try {
+      await loadFirebase();
+      const ref = fb.doc(notesCol(ui.lang, w));
+      const n = newNote(text);
+      await fb.setDoc(ref, n);
+      (notesCache[ck(w)] = notesCache[ck(w)] || []).unshift({ id: ref.id, ...n });
+      return true;
+    } catch (e) { return false; }
+  };
+  Assoc.remove = async (w, id) => {
+    if (!account) return localRemove(w, id);
+    try {
+      await fb.deleteDoc(fb.doc(notesCol(ui.lang, w), id));
+      notesCache[ck(w)] = (notesCache[ck(w)] || []).filter((n) => n.id !== id);
+      return true;
+    } catch (e) { return false; }
+  };
+  Assoc.prefetch = (w) => {
+    const lang = ui.lang, k = ck(w, lang);
+    if (notesCache[k] || notesLoading[k]) return;
+    notesLoading[k] = true;
+    fetchNotes(lang, w).then(() => { notesLoading[k] = false; afterNotes(w, lang); });
+  };
+}
+/* after sign-in, associations written on this device move into the shared list */
+async function migrateLocalAssoc() {
+  for (const lang of LANGS) {
+    let changed = false;
+    for (const [w, e] of Object.entries(state.p[lang])) {
+      if (!e || !Array.isArray(e.a) || !e.a.length) continue;
+      try {
+        for (const text of e.a) {
+          if (!String(text).trim()) continue;
+          const ref = fb.doc(notesCol(lang, w));
+          const n = newNote(text);
+          await fb.setDoc(ref, n);
+          if (notesCache[ck(w, lang)]) notesCache[ck(w, lang)].unshift({ id: ref.id, ...n });
+        }
+      } catch (err) { break; }
+      const rest = { ...e }; delete rest.a;
+      if (Object.keys(rest).length) state.p[lang][w] = rest; else delete state.p[lang][w];
+      changed = true;
     }
-  } catch (e) { notesCache[k] = null; }
-  if (!box.isConnected) return;
-  const others = (notesCache[k] || []).filter((n) => !account || n.uid !== account.uid);
-  box.innerHTML = (others.length
-    ? `<h4>אסוציאציות של משתמשים אחרים (${others.length})</h4>` + others.map((n, i) => `
-        <div class="note-item"><span class="note-text">${esc(n.text || "")}</span>
-          <span class="note-meta"><span>${esc(n.name || "משתמש")}</span><button type="button" data-copy-note="${i}">להעתיק אליי</button></span></div>`).join("")
-    : "")
-    + `<p class="hint-line">${account ? "אחרי שמירה, האסוציאציה שלך גלויה לכל המשתמשים עם השם " + esc(account.shareName) + "." : "התחברו כדי שגם משתמשים אחרים יראו את האסוציאציה שלכם."}</p>`;
-  box._notes = others;
-}
-function attachNotes(textarea) {
-  if (!FIREBASE_CONFIG || !textarea || textarea.dataset.notes) return;
-  textarea.dataset.notes = "1";
-  const bar = document.createElement("div");
-  bar.className = "save-bar";
-  bar.innerHTML = `<button type="button" class="save-assoc">שמירה</button><span class="save-status" role="status"></span>`;
-  textarea.insertAdjacentElement("afterend", bar);
-  const box = document.createElement("div");
-  box.className = "others";
-  bar.insertAdjacentElement("afterend", box);
-  loadNotes(ui.lang, textarea.dataset.w, box);
-}
-const _renderPractice = renderPractice;
-renderPractice = function () { _renderPractice(); attachNotes($("assoc")); };
-document.addEventListener("toggle", (e) => {
-  const row = e.target;
-  if (row.classList && row.classList.contains("row") && row.open) attachNotes(row.querySelector("textarea[data-w]"));
-}, true);
-document.addEventListener("input", (e) => {
-  if (e.target.tagName === "TEXTAREA" && e.target.dataset.w) {
-    const bar = e.target.nextElementSibling;
-    if (bar && bar.classList.contains("save-bar")) { bar.querySelector(".save-status").textContent = ""; bar.querySelector(".save-assoc").disabled = false; }
+    if (changed) { lsSet(LS_STATE, state); queueWrite(lang); }
   }
-});
-document.addEventListener("click", (e) => {
-  const sv = e.target.closest(".save-assoc");
-  if (sv) {
-    const bar = sv.parentElement, ta = bar.previousElementSibling, status = bar.querySelector(".save-status");
-    const w = ta.dataset.w, text = ta.value;
-    setEntry(w, { a: text.trim() ? text : "" });
-    if (!account) { status.textContent = "נשמר אצלך ✓"; sv.disabled = true; return; }
-    sv.disabled = true; status.textContent = "שומר…";
-    shareAssoc(ui.lang, w, text).then((ok) => {
-      const k = ui.lang + "|" + w;
-      if (notesCache[k]) {
-        notesCache[k] = notesCache[k].filter((n) => n.uid !== account.uid);
-        if (text.trim()) notesCache[k].unshift({ uid: account.uid, text: text.trim(), name: account.shareName, t: Date.now() });
-      }
-      status.textContent = ok ? (text.trim() ? "נשמר ושותף ✓" : "נמחק ✓") : "נשמר אצלך, אבל השיתוף לא הצליח. נסו שוב.";
-      sv.disabled = ok;
-    });
-    return;
-  }
-  const b = e.target.closest("[data-copy-note]");
-  if (!b) return;
-  const box = b.closest(".others"), ta = box && box.parentElement.querySelector("textarea[data-w]");
-  const n = box && box._notes && box._notes[Number(b.dataset.copyNote)];
-  if (!ta || !n) return;
-  ta.value = ta.value.trim() ? ta.value.trim() + "\n" + n.text : n.text;
-  ta.dispatchEvent(new Event("input", { bubbles: true }));
-  b.textContent = "הועתק";
-});
+}
 
 /* backup file */
 function backupMsg(t) { const el = $("backupMsg"); el.textContent = t; clearTimeout(backupMsg.t); backupMsg.t = setTimeout(() => (el.textContent = ""), 6000); }
