@@ -87,6 +87,14 @@ kbd { font-family: var(--body); font-size: .72rem; border: 1px solid var(--line)
 .meaning { font-size: 1.25rem; font-weight: 600; text-align: center; text-wrap: balance; }
 .meaning ol { margin: 0; padding: 0 1.2em 0 0; text-align: start; display: grid; gap: 4px; }
 .hint-box { display: grid; gap: 8px; }
+.note-img { display: block; max-width: 96px; max-height: 72px; border-radius: 8px; border: 1px solid var(--line); object-fit: cover; cursor: zoom-in; margin-top: 4px; }
+.note-img.big { max-width: 100%; max-height: 360px; object-fit: contain; cursor: zoom-out; }
+.composer { position: relative; }
+.composer.drag textarea { outline: 2px dashed var(--accent); outline-offset: 2px; }
+.img-btn { border: 1px solid var(--line) !important; background: var(--surface) !important; color: var(--ink) !important; padding: 8px 10px !important; font-size: 1.05rem; }
+.img-preview { display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; }
+.img-preview img { max-width: 64px; max-height: 48px; border-radius: 6px; border: 1px solid var(--line); object-fit: cover; }
+.img-preview button { border: 0; background: none; color: var(--red); font-weight: 700; font-size: .8rem; padding: 2px; }
 .hint-box h4 { margin: 0; font-size: .8rem; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
 .small-link { font-size: .82rem; font-weight: 600; color: var(--muted); padding: 2px; }
 .hint { margin: 0; color: var(--muted); font-style: italic; text-align: center; white-space: pre-wrap; }
@@ -362,12 +370,15 @@ const Assoc = {
   remove: async (w, id) => { const a = (entry(w).a || []).slice(); a.splice(Number(id), 1); setEntry(w, { a }); return true; },
   act: async () => false,       // visibility changes (public build only)
   like: async () => false,      // toggle a like (public build only); returns true, false, or "signin"
+  canImage: () => false,        // images need an account (public build only)
   others: () => null,           // [{text, name}], or null when sharing isn't available
   note: () => "",
   prefetch: () => {}
 };
 const hasMine = (w) => Assoc.mine(w).length > 0 || (entry(w).f || []).length > 0;
-const favKey = (n) => n.text.trim();
+const favKey = (n) => (n.text || "").trim() || "img:" + String(n.img || "").slice(-48);
+const safeImg = (src) => typeof src === "string" && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(src) ? src : "";
+const imgHTML = (src) => safeImg(src) ? `<img class="note-img" src="${safeImg(src)}" alt="תמונה של אסוציאציה" loading="lazy">` : "";
 const favsOf = (w) => new Set(entry(w).f || []);
 const hiddenOf = (w) => new Set(entry(w).h || []);
 const showingHidden = new Set();   // words where the viewer opened their hidden list (this visit only)
@@ -393,7 +404,7 @@ function noteHTML(n, kind, i, starred) {
     : kind === "mine"
       ? `<span class="likes-own" title="לייקים">♥ ${n.likeCount}</span>`
       : `<button type="button" class="like" data-like="${esc(n.id)}" aria-pressed="${!!n.liked}" aria-label="${n.liked ? "ביטול לייק" : "לייק"}" title="${n.liked ? "ביטול לייק" : "לייק"}">${n.liked ? "♥" : "♡"} ${n.likeCount}</button>`;
-  return `<li class="${kind === "mine" ? "mine-item" : ""}${kind === "hidden" ? "hidden-item" : ""}${starred ? " fav-item" : ""}"><span class="note-head"><span class="note-text">${esc(n.text)}</span><span class="head-actions">${likes}${kind === "hidden" ? "" : star}</span></span>
+  return `<li class="${kind === "mine" ? "mine-item" : ""}${kind === "hidden" ? "hidden-item" : ""}${starred ? " fav-item" : ""}"><span class="note-head"><span class="note-text">${esc(n.text)}${imgHTML(n.img)}</span><span class="head-actions">${likes}${kind === "hidden" ? "" : star}</span></span>
     <span class="note-meta">${meta}</span></li>`;
 }
 function assocHTML(w) {
@@ -425,9 +436,11 @@ function assocHTML(w) {
       : `<p class="assoc-empty">${othersAll.length ? "אין עוד אסוציאציות של אחרים להציג." : "עוד אין אסוציאציות של אחרים למילה הזו."}</p>`)
     + hiddenHTML;
   return `<div class="assoc" data-w="${esc(w)}">
-    <form class="composer">
-      <textarea rows="1" aria-label="אסוציאציה חדשה" placeholder="אסוציאציה חדשה: מילה שנשמעת דומה, תמונה, משפט…"></textarea>
+    <form class="composer"${Assoc.canImage() ? ` style="grid-template-columns: minmax(0, 1fr) auto auto"` : ""}>
+      <textarea rows="1" aria-label="אסוציאציה חדשה" placeholder="${Assoc.canImage() ? "אסוציאציה חדשה, או גררו לכאן תמונה…" : "אסוציאציה חדשה: מילה שנשמעת דומה, תמונה, משפט…"}"></textarea>
+      ${Assoc.canImage() ? `<button type="button" class="img-btn" aria-label="הוספת תמונה" title="הוספת תמונה">🖼️</button><input type="file" class="img-input" accept="image/*" hidden>` : ""}
       <button type="submit">שמירה</button>
+      <div class="img-preview" hidden></div>
     </form>
     <p class="assoc-msg" role="alert"></p>
     ${favItems.length ? `<h4>★ המועדפים שלי</h4><ul class="notes">${favItems.join("")}</ul>` : ""}
@@ -439,10 +452,15 @@ function assocHTML(w) {
 }
 /* hint before the meaning: only my favourites and my own associations */
 function hintHTML(w) {
-  const hidden = hiddenOf(w);
-  const items = [...new Set([...favsOf(w)].filter((k) => !hidden.has(k)).concat(Assoc.mine(w).map((n) => n.text)))];
-  return `<div class="hint-box">${items.length
-    ? `<h4>הרמזים שלי</h4><ul class="notes">${items.map((t) => `<li><span class="note-text">${esc(t)}</span></li>`).join("")}</ul>`
+  const hidden = hiddenOf(w), favs = favsOf(w);
+  const pool = Assoc.mine(w).concat(Assoc.others(w) || []);
+  const seen = new Set(), items = [];
+  const push = (n) => { const k = favKey(n); if (!seen.has(k) && !hidden.has(k)) { seen.add(k); items.push(n); } };
+  [...favs].forEach((k) => { const n = pool.find((x) => favKey(x) === k); push(n || { text: k.startsWith("img:") ? "" : k }); });
+  Assoc.mine(w).forEach(push);
+  const shown = items.filter((n) => n.text || safeImg(n.img));
+  return `<div class="hint-box">${shown.length
+    ? `<h4>הרמזים שלי</h4><ul class="notes">${shown.map((n) => `<li><span class="note-text">${esc(n.text || "")}${imgHTML(n.img)}</span></li>`).join("")}</ul>`
     : `<p class="assoc-empty">עוד אין לך אסוציאציות או מועדפים למילה הזו. אחרי הצגת הפירוש אפשר לכתוב אחת, או לסמן בכוכב אסוציאציה של מישהו אחר.</p>`}</div>`;
 }
 function refreshAssoc(w) {
@@ -698,16 +716,78 @@ document.addEventListener("input", (e) => {
   }
 });
 async function submitAssoc(form) {
-  const box = form.closest(".assoc"), w = box.dataset.w, ta = form.querySelector("textarea"), btn = form.querySelector("button");
-  const text = ta.value.trim();
-  if (!text) { ta.focus(); return; }
+  const box = form.closest(".assoc"), w = box.dataset.w, ta = form.querySelector("textarea"), btn = form.querySelector('button[type="submit"]');
+  const text = ta.value.trim(), img = form._img || "";
+  if (!text && !img) { ta.focus(); return; }
   btn.disabled = true;
-  const ok = await Assoc.add(w, text.slice(0, 500));
+  const ok = await Assoc.add(w, text.slice(0, 500), img);
   btn.disabled = false;
   if (!ok) { box.querySelector(".assoc-msg").textContent = "השמירה לא הצליחה. בדקו את החיבור לאינטרנט ונסו שוב."; return; }
-  ta.value = "";
+  ta.value = ""; form._img = "";
   refreshAssoc(w);
 }
+/* images: shrink in the browser to a small JPEG before saving */
+function shrinkImage(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !/^image\//.test(file.type)) return reject(new Error("type"));
+    const url = URL.createObjectURL(file), im = new Image();
+    im.onload = () => {
+      let side = 480, q = 0.72, out = "";
+      for (let i = 0; i < 6; i++) {
+        const k = Math.min(1, side / Math.max(im.width, im.height));
+        const c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(im.width * k)); c.height = Math.max(1, Math.round(im.height * k));
+        const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height);
+        out = c.toDataURL("image/jpeg", q);
+        if (out.length <= 150000) break;
+        side = Math.round(side * 0.8); q = Math.max(0.5, q - 0.06);
+      }
+      URL.revokeObjectURL(url);
+      out.length <= 150000 ? resolve(out) : reject(new Error("size"));
+    };
+    im.onerror = () => { URL.revokeObjectURL(url); reject(new Error("read")); };
+    im.src = url;
+  });
+}
+async function attachImage(form, file) {
+  const msg = form.closest(".assoc").querySelector(".assoc-msg");
+  try {
+    form._img = await shrinkImage(file);
+    msg.textContent = "";
+    const pv = form.querySelector(".img-preview");
+    pv.innerHTML = `<img src="${form._img}" alt="התמונה שנבחרה"><button type="button" class="img-remove">הסרת התמונה</button>`;
+    pv.hidden = false;
+  } catch (err) {
+    msg.textContent = err.message === "type" ? "אפשר להוסיף רק קובץ תמונה." : "לא הצלחנו לקרוא את התמונה. נסו תמונה אחרת.";
+  }
+}
+document.addEventListener("click", (e) => {
+  const t = e.target;
+  if (t.classList && t.classList.contains("img-btn")) { t.closest(".composer").querySelector(".img-input").click(); return; }
+  if (t.classList && t.classList.contains("img-remove")) { const f = t.closest(".composer"); f._img = ""; const pv = f.querySelector(".img-preview"); pv.innerHTML = ""; pv.hidden = true; return; }
+  if (t.classList && t.classList.contains("note-img") && !t.closest(".img-preview")) { t.classList.toggle("big"); }
+});
+document.addEventListener("change", (e) => {
+  if (e.target.classList && e.target.classList.contains("img-input") && e.target.files[0]) { attachImage(e.target.closest(".composer"), e.target.files[0]); e.target.value = ""; }
+});
+document.addEventListener("dragover", (e) => {
+  const f = e.target.closest && e.target.closest(".composer");
+  if (f && Assoc.canImage()) { e.preventDefault(); f.classList.add("drag"); }
+});
+document.addEventListener("dragleave", (e) => { const f = e.target.closest && e.target.closest(".composer"); if (f) f.classList.remove("drag"); });
+document.addEventListener("drop", (e) => {
+  const f = e.target.closest && e.target.closest(".composer");
+  if (!f || !Assoc.canImage()) return;
+  e.preventDefault(); f.classList.remove("drag");
+  const file = [...(e.dataTransfer?.files || [])].find((x) => /^image\//.test(x.type));
+  if (file) attachImage(f, file);
+});
+document.addEventListener("paste", (e) => {
+  const f = e.target.closest && e.target.closest(".composer");
+  if (!f || !Assoc.canImage()) return;
+  const file = [...(e.clipboardData?.files || [])].find((x) => /^image\//.test(x.type));
+  if (file) { e.preventDefault(); attachImage(f, file); }
+});
 document.addEventListener("submit", (e) => {
   if (e.target.classList.contains("composer")) { e.preventDefault(); submitAssoc(e.target); return; }
   if (e.target.id !== "addForm") return;
@@ -906,7 +986,12 @@ const noteKey = (w) => encodeURIComponent(w).replace(/\./g, "%2E");
 const notesCol = (lang, w) => fb.collection(fb.db, "shared", lang, "words", noteKey(w), "notes");
 const ck = (w, lang = ui.lang) => lang + "|" + w;
 const localAdd = Assoc.add, localRemove = Assoc.remove;
-function newNote(text) { return { uid: account.uid, text: String(text).trim().slice(0, 500), name: account.shareName.slice(0, 40), t: Date.now() }; }
+function newNote(text, img) {
+  const n = { uid: account.uid, text: String(text || "").trim().slice(0, 500), name: account.shareName.slice(0, 40), t: Date.now() };
+  if (img) n.img = img;
+  return n;
+}
+const privItem = (x) => (typeof x === "string" ? { text: x } : { text: String(x.text || ""), img: x.img || "" });
 async function fetchNotes(lang, w) {
   const k = ck(w, lang);
   try {
@@ -929,13 +1014,13 @@ if (FIREBASE_CONFIG) {
     const shared = (notesCache[ck(w)] || []).filter((n) => n.uid === account.uid).map((n) => {
       const anon = !n.name;
       return {
-        id: n.id, text: n.text, vis: anon ? "anon" : "named", likeCount: (n.likes || []).length,
+        id: n.id, text: n.text, img: n.img || "", vis: anon ? "anon" : "named", likeCount: (n.likes || []).length,
         badge: anon ? "גלוי לכולם, בלי שם" : `גלוי לכולם בשם ${n.name}`,
         actions: [anon ? { key: "named", label: "להציג את שמי" } : { key: "anon", label: "להפוך לאנונימי" }, { key: "hide", label: "להסתיר מכולם" }]
       };
     });
-    const priv = (entry(w).pa || []).map((text, i) => ({
-      id: "p" + i, text, vis: "private", badge: "מוסתר מכולם", actions: [{ key: "share", label: "לשתף" }]
+    const priv = (entry(w).pa || []).map((x, i) => ({
+      id: "p" + i, ...privItem(x), vis: "private", badge: "מוסתר מכולם", actions: [{ key: "share", label: "לשתף" }]
     }));
     return shared.concat(priv);
   };
@@ -946,9 +1031,10 @@ if (FIREBASE_CONFIG) {
       await loadFirebase();
       if (act === "share") {
         const list = (entry(w).pa || []).slice();
-        const [text] = list.splice(Number(id.slice(1)), 1);
-        if (text === undefined) return false;
-        const ref = fb.doc(col()); const n = newNote(text);
+        const [item] = list.splice(Number(id.slice(1)), 1);
+        if (item === undefined) return false;
+        const p = privItem(item);
+        const ref = fb.doc(col()); const n = newNote(p.text, p.img);
         await fb.setDoc(ref, n);
         (notesCache[k] = notesCache[k] || []).unshift({ id: ref.id, ...n });
         setEntry(w, { pa: list });
@@ -959,7 +1045,7 @@ if (FIREBASE_CONFIG) {
       if (act === "hide") {
         await fb.deleteDoc(fb.doc(col(), id));
         notesCache[k] = notesCache[k].filter((n) => n.id !== id);
-        setEntry(w, { pa: (entry(w).pa || []).concat(old.text) });
+        setEntry(w, { pa: (entry(w).pa || []).concat(old.img ? [{ text: old.text, img: old.img }] : [old.text]) });
         return true;
       }
       if (act === "anon" || act === "named") {
@@ -988,12 +1074,13 @@ if (FIREBASE_CONFIG) {
   Assoc.note = () => account
     ? `אסוציאציה חדשה גלויה לכולם בשם ${esc(account.shareName)}. לכל אסוציאציה אפשר לבחור להפוך לאנונימית או להסתיר מכולם.`
     : "בלי משתמש, האסוציאציות שלך נשמרות רק בדפדפן הזה. התחברו כדי לשמור אותן במשתמש ולשתף עם אחרים.";
-  Assoc.add = async (w, text) => {
-    if (!account) return localAdd(w, text);
+  Assoc.canImage = () => !!account;
+  Assoc.add = async (w, text, img) => {
+    if (!account) return text ? localAdd(w, text) : false;
     try {
       await loadFirebase();
       const ref = fb.doc(notesCol(ui.lang, w));
-      const n = newNote(text);
+      const n = newNote(text, img);
       await fb.setDoc(ref, n);
       (notesCache[ck(w)] = notesCache[ck(w)] || []).unshift({ id: ref.id, ...n });
       return true;
