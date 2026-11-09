@@ -38,6 +38,11 @@ button { cursor: pointer; }
 
 header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 14px 12px; display: grid; gap: 12px; border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.how-link { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  border-radius: 99px; padding: 4px 12px 4px 6px; font-size: .85rem; font-weight: 700; }
+.how-link span { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--orange-soft); color: var(--orange); font-weight: 800; font-size: .8rem; }
+.how-link[aria-pressed="true"] { border-color: var(--orange); background: var(--orange-soft); }
 .brand h1 { margin: 0; font-family: var(--display); font-size: 1.6rem; font-weight: 700; line-height: 1.1; display: flex; align-items: center; gap: 10px; }
 .lights { display: inline-flex; flex-direction: column; gap: 3px; padding: 4px; border-radius: 8px; background: var(--ink); }
 .lights i { width: 7px; height: 7px; border-radius: 50%; display: block; }
@@ -245,7 +250,10 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
 <div class="app" dir="rtl" lang="he">
   <header>
     <div class="brand">
-      <h1><span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>רמזור מילים</h1>
+      <div class="title-row">
+        <h1><span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>רמזור מילים</h1>
+        <button type="button" class="how-link" id="howBtn" data-view="how"><span aria-hidden="true">?</span>איך זה עובד</button>
+      </div>
       <div class="seg-tabs" role="group" aria-label="שפה">
         <button type="button" id="lang-en" data-lang="en">אנגלית</button>
         <button type="button" id="lang-he" data-lang="he">עברית</button>
@@ -265,7 +273,6 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
     <div class="seg-tabs" role="group" aria-label="תצוגה">
       <button type="button" id="view-practice" data-view="practice">תרגול</button>
       <button type="button" id="view-list" data-view="list">רשימה</button>
-      <button type="button" id="view-how" data-view="how">איך זה עובד</button>
     </div>
     <button type="button" class="link" id="shuffleBtn"></button>
   </div>
@@ -529,7 +536,8 @@ function renderHeader() {
       <span class="l"><span class="check" aria-hidden="true"></span><span class="dot s-${s}"></span>${STATUS[s]}</span>
     </button>`).join("");
   for (const l of ["en", "he"]) $("lang-" + l).setAttribute("aria-pressed", ui.lang === l);
-  for (const v of ["practice", "list", "how"]) $("view-" + v).setAttribute("aria-pressed", ui.view === v);
+  for (const v of ["practice", "list"]) $("view-" + v).setAttribute("aria-pressed", ui.view === v);
+  $("howBtn").setAttribute("aria-pressed", ui.view === "how");
   $("shuffleBtn").textContent = ui.shuffle ? "סדר: מעורבב" : "סדר: לפי המילון";
   $("shuffleBtn").hidden = ui.view !== "practice";
   document.querySelector(".scope").hidden = document.getElementById("bar").hidden = document.getElementById("chips").hidden = ui.view === "how";
@@ -1251,6 +1259,7 @@ document.addEventListener("change", (e) => {
 /* ---------- Start ---------- */
 state = normalize(lsGet(LS_STATE));
 const savedUI = lsGet(LS_UI);
+if (!savedUI) ui.view = "how";   // first visit: start with the explanation
 if (savedUI && typeof savedUI === "object") {
   if (savedUI.lang === "en" || savedUI.lang === "he") ui.lang = savedUI.lang;
   if (["practice", "list", "how"].includes(savedUI.view)) ui.view = savedUI.view;
