@@ -129,6 +129,108 @@ kbd { font-family: var(--body); font-size: .72rem; border: 1px solid var(--line)
 @media (hover: none) { .undo-bar kbd { display: none; } }
 .how-keys kbd { font-size: .8rem; padding: 1px 6px; margin-inline: 2px; }
 @media (hover: none) { .how-keys { display: none; } }
+/* Stats */
+.stats { display: grid; gap: 14px; }
+.stats-lang { margin: 0; color: var(--muted); font-size: .9rem; font-weight: 600; }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 560px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: grid; gap: 2px; }
+.tile-n { font-size: 1.7rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.tile-l { font-size: .8rem; color: var(--muted); }
+.tile.hot { background: var(--orange-soft); border-color: color-mix(in srgb, var(--orange) 40%, transparent); }
+.tile.up .tile-n { color: var(--green); }
+.moves { display: flex; flex-wrap: wrap; gap: 6px; }
+.move { background: var(--surface); border: 1px solid var(--line); border-radius: 99px; padding: 4px 12px; font-size: .9rem; direction: ltr; }
+.move b { font-variant-numeric: tabular-nums; }
+.muted-note { color: var(--muted); font-size: .85rem; margin: 0; }
+.stat-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: grid; gap: 10px; }
+.stat-card h3 { margin: 0; font-size: 1rem; }
+.stat-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.days { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 4px; height: 130px; align-items: end; direction: ltr; }
+.day { display: grid; grid-template-rows: auto 1fr auto; height: 100%; align-items: end; justify-items: center; gap: 3px; }
+.day-bar { width: 100%; max-width: 22px; background: color-mix(in srgb, var(--accent) 35%, var(--surface)); border-radius: 5px 5px 2px 2px; align-self: end; }
+.day.today .day-bar { background: var(--green); }
+.day-n { font-size: .68rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.day-l { font-size: .66rem; color: var(--muted); white-space: nowrap; }
+.day.today .day-l { color: var(--ink); font-weight: 700; }
+.big-pct { font-size: 1.6rem; font-weight: 800; color: var(--green); font-variant-numeric: tabular-nums; }
+.big-pct small { font-size: .8rem; color: var(--muted); font-weight: 600; }
+.stat-bar { height: 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.milestone { margin: 0; font-size: .92rem; }
+.units { display: grid; gap: 6px; }
+.unit-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) 40px; align-items: center; gap: 10px; border: 0; background: none; padding: 4px 2px; border-radius: 8px; text-align: start; }
+.unit-row:hover { background: var(--bg); }
+.unit-name { font-size: .85rem; font-weight: 600; }
+.unit-pct { font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; text-align: end; }
+.today-big { display: flex; align-items: baseline; gap: 8px; }
+.today-big b { font-size: 2.2rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.today-big span { color: var(--muted); font-size: .9rem; }
+.mv-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.mv-tile { border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; background: var(--bg); border: 1px solid var(--line); }
+.mv-tile.up { background: var(--green-soft); border-color: color-mix(in srgb, var(--green) 35%, transparent); }
+.mv-tile.new { background: var(--new-soft); }
+.mv-tile.down { background: var(--red-soft); border-color: color-mix(in srgb, var(--red) 30%, transparent); }
+.mv-top { display: flex; justify-content: space-between; align-items: baseline; font-size: .88rem; font-weight: 700; }
+.mv-top b { font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.mv-tile.up .mv-top b { color: var(--green); }
+.mv-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.mv { display: inline-flex; align-items: center; gap: 3px; background: var(--surface); border-radius: 99px; padding: 2px 9px; font-size: .82rem; direction: ltr; }
+.mv .arr { color: var(--muted); } .mv b { margin-left: 4px; font-variant-numeric: tabular-nums; }
+.tw-group { display: grid; gap: 6px; }
+.tw-group h4 { margin: 0; font-size: .85rem; }
+.tw-list { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; }
+.tw { background: var(--bg); border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; font-size: .88rem; max-width: 100%; }
+.tw[open] { border-radius: 12px; }
+.tw summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; direction: ltr; }
+.tw summary::-webkit-details-marker { display: none; }
+.tw .dot { width: 8px; height: 8px; }
+.tw-m { display: block; color: var(--muted); font-size: .82rem; padding-top: 3px; }
+.hero-card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: center; }
+.hero-card.hit { border-color: var(--green); background: color-mix(in srgb, var(--green-soft) 60%, var(--surface)); }
+.ring { position: relative; width: 120px; height: 120px; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring-bg { fill: none; stroke: var(--new-soft); stroke-width: 12; }
+.ring-fg { fill: none; stroke: var(--green); stroke-width: 12; stroke-linecap: round; transition: stroke-dashoffset .8s cubic-bezier(.3,.7,.3,1); }
+.ring-in { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring-in b { font-size: 2rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.ring-in span { font-size: .75rem; color: var(--muted); }
+.hero-text { display: grid; gap: 6px; }
+.hero-text h2 { margin: 0; font-family: var(--display); font-size: 1.35rem; line-height: 1.2; text-wrap: balance; }
+.hero-text p { margin: 0; color: var(--muted); font-size: .9rem; }
+.goal-pick { font-size: .82rem; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+.goal-pick select { padding: 3px 8px; font-size: .82rem; }
+@media (max-width: 420px) { .hero-card { grid-template-columns: 1fr; justify-items: center; text-align: center; } .ring { width: 110px; height: 110px; } }
+.streak-card { background: var(--orange-soft); border: 1px solid color-mix(in srgb, var(--orange) 35%, transparent); border-radius: 16px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.streak-n { font-size: 1rem; } .streak-n b { font-size: 1.6rem; font-variant-numeric: tabular-nums; } .streak-n span { color: var(--muted); font-size: .85rem; }
+.week-dots { display: flex; gap: 6px; direction: ltr; }
+.wd { display: grid; justify-items: center; gap: 2px; }
+.wd i { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: .8rem; font-weight: 800; color: #fff; background: var(--surface); border: 2px solid color-mix(in srgb, var(--orange) 30%, var(--line)); }
+.wd.on i { background: var(--orange); border-color: var(--orange); }
+.wd.now i { box-shadow: 0 0 0 3px color-mix(in srgb, var(--orange) 30%, transparent); }
+.wd small { font-size: .62rem; color: var(--muted); }
+.week-nums { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 520px) { .week-nums { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.week-nums > div { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; display: grid; gap: 2px; }
+.week-nums b { font-size: 1.5rem; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.week-nums span { font-size: .78rem; color: var(--muted); }
+.week-nums .up b, .week-nums .green b { color: var(--green); }
+.units-card summary { list-style: none; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.units-card summary::-webkit-details-marker { display: none; }
+.units-card[open] summary .muted-note { visibility: hidden; }
+.celebrate { position: fixed; left: 50%; top: 30%; z-index: 50; transform: translate(-50%, -50%) scale(.6); opacity: 0; background: var(--surface); color: var(--ink);
+  border: 2px solid var(--green); border-radius: 18px; padding: 14px 20px; font-weight: 800; font-size: 1.15rem; box-shadow: 0 16px 40px rgb(0 0 0 / .2);
+  animation: cel-in .4s cubic-bezier(.2,1.6,.4,1) forwards; transition: opacity .5s, transform .5s; text-align: center; }
+.celebrate.out { opacity: 0; transform: translate(-50%, -60%) scale(.9); }
+@keyframes cel-in { to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+.burst { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+.burst i { position: absolute; width: 8px; height: 8px; border-radius: 2px; background: var(--c); transform: rotate(var(--a)) translateY(0); animation: bit .9s ease-out forwards; }
+@keyframes bit { to { transform: rotate(var(--a)) translateY(-110px) rotate(200deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .celebrate { animation: none; opacity: 1; transform: translate(-50%, -50%); } .burst { display: none; } }
+.stats-lock { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 24px 18px; display: grid; gap: 10px; justify-items: start; }
+.stats-lock h2 { margin: 0; font-family: var(--display); font-size: 1.5rem; }
+.stats-lock p { margin: 0; color: var(--muted); line-height: 1.6; }
 .small-link { font-size: .82rem; font-weight: 600; color: var(--muted); padding: 2px; }
 .hint { margin: 0; color: var(--muted); font-style: italic; text-align: center; white-space: pre-wrap; }
 .assoc { display: grid; gap: 8px; }
@@ -225,6 +327,7 @@ footer { margin-top: 26px; color: var(--muted); font-size: .82rem; display: grid
 <style>
 :root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
 body { margin: 0; } img { max-width: 100%; } [hidden] { display: none !important; }
+.site-counts { display: inline-flex; gap: 12px; justify-content: center; flex-wrap: wrap; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
 .backup { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
 .backup button { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 6px 12px; font-weight: 600; font-size: .82rem; }
 .acct { margin-inline-start: auto; border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 5px 12px; font-weight: 600; font-size: .85rem; display: inline-flex; align-items: center; gap: 6px; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -276,6 +379,7 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
     <div class="seg-tabs" role="group" aria-label="תצוגה">
       <button type="button" id="view-practice" data-view="practice">תרגול</button>
       <button type="button" id="view-list" data-view="list">רשימה</button>
+      <button type="button" id="view-stats" data-view="stats">ההתקדמות שלי</button>
     </div>
     <button type="button" class="link" id="shuffleBtn"></button>
   </div>
@@ -283,7 +387,8 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
   <main id="main"><div class="empty"><h2>טוען את המילון…</h2></div></main>
 
   <footer>
-    <span class="sync" id="sync"><i></i><span id="syncText">ההתקדמות נשמרת בדפדפן הזה</span></span>
+    <span class="site-counts" id="siteCounts" hidden></span>
+<span class="sync" id="sync"><i></i><span id="syncText">ההתקדמות נשמרת בדפדפן הזה</span></span>
 
     <span>המילים: מילוני עברית ואנגלית של קורס "הפסיכומטרי של המדינה" בקמפוס IL.</span>
   </footer>
@@ -328,8 +433,8 @@ const PAGE = 150;
 const LS_STATE = "ramzor-state-v2", LS_UI = "ramzor-ui-v2";
 
 let DICT = null; // {en: [[word, meaning, unit]], he: [...]}
-let state = { p: { en: {}, he: {} }, c: { en: [], he: [] } };
-let ui = { lang: "en", view: "practice", unit: "1", filter: { r: true, o: true, g: false, n: true }, shuffle: true };
+let state = { p: { en: {}, he: {} }, c: { en: [], he: [] }, l: { en: {}, he: {} } };
+let ui = { lang: "en", view: "practice", unit: "1", filter: { r: true, o: true, g: false, n: true }, shuffle: true, goal: 20 };
 let queue = [], pos = 0, revealed = false, hint = false, pendingDelete = null, listShown = PAGE, query = "";
 let undoStack = [];   // [{w, prev, s, pos}], most recent last; cleared when the round is rebuilt
 
@@ -340,7 +445,8 @@ const lsGet = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch
 const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 
 function normLang(d) {
-  const o = { p: {}, c: [] };
+  const o = { p: {}, c: [], l: {} };
+  if (d && d.l && typeof d.l === "object" && !Array.isArray(d.l)) o.l = JSON.parse(JSON.stringify(d.l));
   if (!d || typeof d !== "object") return o;
   if (d.p && typeof d.p === "object") {
     o.p = JSON.parse(JSON.stringify(d.p));
@@ -362,9 +468,9 @@ function normLang(d) {
   return o;
 }
 function normalize(d) {
-  const o = { p: { en: {}, he: {} }, c: { en: [], he: [] } };
+  const o = { p: { en: {}, he: {} }, c: { en: [], he: [] }, l: { en: {}, he: {} } };
   if (!d || !d.p) return o;
-  for (const l of ["en", "he"]) { const n = normLang({ p: d.p[l], c: d.c && d.c[l] }); o.p[l] = n.p; o.c[l] = n.c; }
+  for (const l of ["en", "he"]) { const n = normLang({ p: d.p[l], c: d.c && d.c[l], l: d.l && d.l[l] }); o.p[l] = n.p; o.c[l] = n.c; o.l[l] = n.l; }
   return o;
 }
 
@@ -542,11 +648,11 @@ function renderHeader() {
       <span class="l"><span class="check" aria-hidden="true"></span><span class="dot s-${s}"></span>${STATUS[s]}</span>
     </button>`).join("");
   for (const l of ["en", "he"]) $("lang-" + l).setAttribute("aria-pressed", ui.lang === l);
-  for (const v of ["practice", "list"]) $("view-" + v).setAttribute("aria-pressed", ui.view === v);
+  for (const v of ["practice", "list", "stats"]) $("view-" + v).setAttribute("aria-pressed", ui.view === v);
   $("howBtn").setAttribute("aria-pressed", ui.view === "how");
   $("shuffleBtn").textContent = ui.shuffle ? "סדר: מעורבב" : "סדר: לפי המילון";
   $("shuffleBtn").hidden = ui.view !== "practice";
-  document.querySelector(".scope").hidden = document.getElementById("bar").hidden = document.getElementById("chips").hidden = ui.view === "how";
+  document.querySelector(".scope").hidden = document.getElementById("bar").hidden = document.getElementById("chips").hidden = ui.view === "how" || ui.view === "stats";
 }
 
 /* ---------- Practice ---------- */
@@ -605,15 +711,57 @@ function renderPractice() {
       <button type="button" id="nextBtn">דילוג ←</button>
     </div>`;
 }
+/* ---------- Stats log ---------- */
+const Stats = { enabled: () => true };   // the public build allows tracking for signed-in users only
+const RANK = { n: 0, r: 1, o: 2, g: 3 };
+const dayKey = (d = new Date()) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+function logRate(prev, s, sign = 1, lang = ui.lang, w = null) {
+  if (!Stats.enabled()) return;
+  const L = (state.l[lang] = state.l[lang] || {});
+  const k = dayKey(), d = (L[k] = L[k] || { n: 0, up: 0, nw: 0, t: {} });
+  d.t = d.t || {};
+  d.n = Math.max(0, (d.n || 0) + sign);
+  if (prev !== s) {
+    if (prev === "n") d.nw = Math.max(0, (d.nw || 0) + sign);
+    else if (RANK[s] > RANK[prev]) d.up = Math.max(0, (d.up || 0) + sign);
+    const tk = prev + ">" + s;
+    d.t[tk] = Math.max(0, (d.t[tk] || 0) + sign);
+    if (!d.t[tk]) delete d.t[tk];
+  }
+  if (w) {
+    d.w = d.w || {};
+    const cur = d.w[w];
+    if (sign > 0) d.w[w] = [cur ? cur[0] : prev, s, (cur ? cur[2] : 0) + 1];
+    else if (cur) { if (cur[2] <= 1) delete d.w[w]; else d.w[w] = [cur[0], prev, cur[2] - 1]; }
+  }
+  const keys = Object.keys(L).sort();
+  while (keys.length > 400) delete L[keys.shift()];
+  keys.slice(0, -7).forEach((k) => { if (L[k] && L[k].w) delete L[k].w; });
+}
 const COLOR_NAME = { g: "ירוק", o: "כתום", r: "אדום", n: "לא מסווג" };
 function rate(s) {
   if (pos >= queue.length) return;
   const w = queue[pos].w;
   undoStack.push({ w, prev: statusOf(w), s, pos });
+  const greenBefore = s === "g" && statusOf(w) !== "g" ? allWords().filter((x) => statusOf(x.w) === "g").length : -1;
+  logRate(statusOf(w), s, 1, ui.lang, w);
+  if (Stats.enabled()) {
+    if (greenBefore >= 0 && MILESTONES.includes(greenBefore + 1)) celebrate(`🌟 ${greenBefore + 1} מילים בירוק!`);
+  }
   if (undoStack.length > 50) undoStack.shift();
   setEntry(w, { s });
   pos++; revealed = false; hint = false;
   renderHeader(); renderPractice(); showUndo();
+}
+function celebrate(text) {
+  document.querySelectorAll(".celebrate").forEach((e) => e.remove());
+  const el = document.createElement("div");
+  el.className = "celebrate"; el.setAttribute("role", "status");
+  const bits = Array.from({ length: 18 }, (_, i) => `<i style="--a:${i * 20}deg;--c:${["#24894f", "#d07a12", "#c93c3c", "#24497a"][i % 4]}"></i>`).join("");
+  el.innerHTML = `<div class="burst">${bits}</div><span>${esc(text)}</span>`;
+  document.body.appendChild(el);
+  setTimeout(() => el.classList.add("out"), 2600);
+  setTimeout(() => el.remove(), 3200);
 }
 function showUndo() {
   const last = undoStack[undoStack.length - 1];
@@ -626,6 +774,7 @@ function showUndo() {
 function undoRate() {
   const last = undoStack.pop();
   if (!last) return;
+  logRate(last.prev, last.s, -1, ui.lang, last.w);
   setEntry(last.w, { s: last.prev });
   pos = last.pos; revealed = false; hint = false;
   renderHeader(); renderPractice(); showUndo();
@@ -687,7 +836,79 @@ function updateRow(rowEl) {
 }
 
 /* ---------- Render ---------- */
-function render() { renderHeader(); ui.view === "practice" ? renderPractice() : ui.view === "how" ? renderHow() : renderList(); }
+function render() { renderHeader(); ui.view === "practice" ? renderPractice() : ui.view === "how" ? renderHow() : ui.view === "stats" ? renderStats() : renderList(); }
+const HEB_DAYS = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"];
+function stackBar(cc, total) {
+  return `<div class="bar stat-bar">${["g", "o", "r", "n"].map((k) => `<span class="b-${k}" style="width:${total ? (cc[k] / total) * 100 : 0}%"></span>`).join("")}</div>`;
+}
+function todayWordsHTML(today) {
+  const list = Object.values(today.w || {});
+  if (!list.length) return `<div class="stat-card"><h3>מה עשית היום</h3><p class="muted-note">עוד לא תרגלתם היום. כל מילה שתסמנו תיספר כאן.</p></div>`;
+  const cnt = (f) => list.filter(f).length;
+  const end = { g: cnt(([, b]) => b === "g"), o: cnt(([, b]) => b === "o"), r: cnt(([, b]) => b === "r"), n: 0 };
+  const moves = (pairs) => pairs.map(([a, b]) => [a, b, cnt(([x, y]) => x === a && y === b)]).filter((m) => m[2]);
+  const up = moves([["r", "g"], ["o", "g"], ["r", "o"]]);
+  const nw = moves([["n", "g"], ["n", "o"], ["n", "r"]]);
+  const down = moves([["g", "o"], ["g", "r"], ["o", "r"]]);
+  const chip = ([a, b, n]) => `<span class="mv">${a === "n" ? `<i class="dot s-n"></i>` : `<i class="dot s-${a}"></i>`}<span class="arr">→</span><i class="dot s-${b}"></i><b>${n}</b></span>`;
+  const tile = (cls, icon, title, items, total) => total ? `<div class="mv-tile ${cls}"><div class="mv-top"><span>${icon} ${title}</span><b>${total}</b></div><div class="mv-row">${items}</div></div>` : "";
+  const sum = (arr) => arr.reduce((a, m) => a + m[2], 0);
+  return `<div class="stat-card today-card">
+    <div class="stat-head"><h3>מה עשית היום</h3></div>
+    <div class="today-big"><b>${list.length}</b><span>מילים תרגלת היום</span></div>
+    ${stackBar(end, list.length)}
+    <div class="legend"><span><i class="dot s-g"></i>${end.g} הסתיימו בירוק</span><span><i class="dot s-o"></i>${end.o} בכתום</span><span><i class="dot s-r"></i>${end.r} באדום</span></div>
+    <div class="mv-tiles">
+      ${tile("up", "⬆️", "עלו בצבע", up.map(chip).join(""), sum(up))}
+      ${tile("new", "🆕", "חדשות שמוינו", nw.map(chip).join(""), sum(nw))}
+      ${tile("down", "⬇️", "ירדו בצבע", down.map(chip).join(""), sum(down))}
+    </div>
+  </div>`;
+}
+const MILESTONES = [10, 25, 50, 100, 250, 500, 750, 1000, 1500, 2000, 2500, 3000, 3500];
+function renderStats() {
+  const main = $("main");
+  if (!DICT) return;
+  const langName = ui.lang === "en" ? "באנגלית" : "בעברית";
+  if (!Stats.enabled()) {
+    main.innerHTML = `<section class="stats"><div class="stats-lock">
+      <h2>🔒 ההתקדמות שלי</h2>
+      <p>מעקב ההתקדמות זמין למשתמשים רשומים: מה עשיתם היום, כמה מילים עלו בצבע מאז שהתחלתם, וההתקדמות בכל יחידה.</p>
+      <button type="button" class="primary signup-link">להרשמה או התחברות</button></div></section>`;
+    return;
+  }
+  const L = state.l[ui.lang] || {}, today = L[dayKey()] || { n: 0, up: 0, nw: 0, t: {} };
+  const life = Object.values(L).reduce((a, d) => ({ n: a.n + (d.n || 0), nw: a.nw + (d.nw || 0), up: a.up + (d.up || 0), days: a.days + ((d.n || 0) > 0 ? 1 : 0) }), { n: 0, nw: 0, up: 0, days: 0 });
+  const all = allWords(), c = { r: 0, o: 0, g: 0, n: 0 };
+  all.forEach((x) => c[statusOf(x.w)]++);
+  const tot = all.length || 1, pct = Math.round((c.g / tot) * 100);
+  const next = MILESTONES.find((m) => m > c.g);
+  const units = UNITS.map((u) => { const cc = { r: 0, o: 0, g: 0, n: 0 }; let t = 0; all.forEach((x) => { if (x.u === u) { cc[statusOf(x.w)]++; t++; } }); return { u, t, cc }; });
+  main.innerHTML = `<section class="stats">
+    ${todayWordsHTML(today)}
+    <div class="stat-card">
+      <h3>מאז שהתחלת</h3>
+      <div class="week-nums">
+        <div><b>${life.n}</b><span>מילים תרגלת</span></div>
+        <div><b>🆕 ${life.nw}</b><span>מוינו לראשונה</span></div>
+        <div class="up"><b>↑ ${life.up}</b><span>עלו בצבע</span></div>
+        <div><b>${life.days}</b><span>${life.days === 1 ? "יום תרגול" : "ימי תרגול"}</span></div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-head"><h3>כל המילים ${langName}</h3><span class="big-pct">${pct}% <small>בירוק</small></span></div>
+      ${stackBar(c, tot)}
+      <div class="legend"><span><i class="dot s-g"></i>${c.g} ירוק</span><span><i class="dot s-o"></i>${c.o} כתום</span><span><i class="dot s-r"></i>${c.r} אדום</span><span><i class="dot s-n"></i>${c.n} חדשות</span></div>
+      <p class="milestone">${next ? `🎯 עוד <b>${next - c.g}</b> מילים בירוק ותגיעו ל־${next}` : "🏆 עברתם את כל אבני הדרך!"}</p>
+    </div>
+    <details class="stat-card units-card">
+      <summary><h3>לפי יחידה</h3><span class="muted-note">הצגה</span></summary>
+      <div class="units">${units.map((x) => `<button type="button" class="unit-row" data-unit-jump="${x.u}">
+        <span class="unit-name">יחידה ${x.u}</span>${stackBar(x.cc, x.t)}<span class="unit-pct">${x.t ? Math.round((x.cc.g / x.t) * 100) : 0}%</span></button>`).join("")}</div>
+      <p class="muted-note">לחיצה על יחידה פותחת אותה לתרגול.</p>
+    </details>
+  </section>`;
+}
 function renderHow() {
   $("main").innerHTML = `
   <section class="how" aria-labelledby="how-title">
@@ -713,6 +934,11 @@ function renderHow() {
         <span class="how-num">3</span>
         <h3>מתרגלים רק את מה שנשאר</h3>
         <p>מסמנים למעלה כתום, אדום או את שניהם, ועוברים רק עליהם. בכל סבב הסדר מתערבב מחדש.</p>
+      </li>
+      <li class="how-card">
+        <span class="how-num">4</span>
+        <h3>עוקבים אחרי ההתקדמות</h3>
+        <p>בלשונית "ההתקדמות שלי" רואים מה עשיתם היום, כמה מילים עלו בצבע מאז שהתחלתם ואיפה אתם עומדים בכל יחידה. למשתמשים רשומים.</p>
       </li>
     </ol>
     <div class="how-also">
@@ -746,6 +972,7 @@ document.addEventListener("click", (e) => {
   if (t.dataset.rate) { rate(t.dataset.rate); return; }
   if (t.id === "prevBtn") { pos = Math.max(0, pos - 1); revealed = false; hint = false; renderPractice(); return; }
   if (t.id === "undoBtn") { undoRate(); return; }
+  if (t.dataset.unitJump) { ui.unit = t.dataset.unitJump; ui.view = "practice"; saveUI(); resetView(); window.scrollTo(0, 0); return; }
   if (t.classList.contains("signup-link")) { const a = document.getElementById("acctBtn"); if (a && !a.hidden) a.click(); return; }
   if (t.id === "nextBtn") { pos++; revealed = false; hint = false; renderPractice(); return; }
   if (t.id === "againBtn") { buildQueue(); renderPractice(); return; }
@@ -798,7 +1025,7 @@ document.addEventListener("click", (e) => {
     });
     return;
   }
-  if (t.dataset.set) { const x = rowOf(t); if (!x) return; setEntry(x.w, { s: t.dataset.set }); updateRow(t.closest(".row")); renderHeader(); return; }
+  if (t.dataset.set) { const x = rowOf(t); if (!x) return; if (statusOf(x.w) !== t.dataset.set) logRate(statusOf(x.w), t.dataset.set, 1, ui.lang, x.w); setEntry(x.w, { s: t.dataset.set }); updateRow(t.closest(".row")); renderHeader(); return; }
   if (t.dataset.del) {
     const w = t.dataset.del;
     if (pendingDelete !== w) { pendingDelete = w; t.textContent = "ללחוץ שוב כדי למחוק"; return; }
@@ -990,7 +1217,7 @@ async function loadFirebase() {
     googlePopup: () => authM.signInWithPopup(fb.auth, new authM.GoogleAuthProvider()),
     doc: fsM.doc, getDoc: fsM.getDoc, setDoc: fsM.setDoc, onSnapshot: fsM.onSnapshot,
     collection: fsM.collection, getDocs: fsM.getDocs, query: fsM.query, orderBy: fsM.orderBy, limit: fsM.limit, deleteDoc: fsM.deleteDoc,
-    updateDoc: fsM.updateDoc, arrayUnion: fsM.arrayUnion, arrayRemove: fsM.arrayRemove
+    updateDoc: fsM.updateDoc, arrayUnion: fsM.arrayUnion, arrayRemove: fsM.arrayRemove, count: fsM.getCountFromServer
   };
   return fb;
 }
@@ -1023,6 +1250,7 @@ async function startAccounts() {
   renderAccount();
   if (!FIREBASE_CONFIG) return;
   try { await loadFirebase(); } catch (e) { $("acctBtn").hidden = true; return; }
+  loadCounts();
   fb.onAuth(fb.auth, async (u) => {
     unsubs.forEach((f) => f()); unsubs = [];
     if (!u) { account = null; renderAccount(); localSyncText(); return; }
@@ -1030,6 +1258,7 @@ async function startAccounts() {
     account = { uid: u.uid, name: viaPassword ? userName(u.email) : (u.displayName || u.email || "משתמש Google") };
     account.shareName = (viaPassword ? account.name : (u.displayName || "").split(" ")[0]) || "משתמש";
     renderAccount(); setSync("מסנכרן עם המשתמש…");
+    fb.setDoc(fb.doc(fb.db, "members", u.uid), { t: Date.now() }).then(loadCounts).catch(() => {});
     try {
       for (const lang of LANGS) {
         const snap = await fb.getDoc(fb.doc(fb.db, "users", u.uid, "progress", lang));
@@ -1155,6 +1384,7 @@ if (FIREBASE_CONFIG) {
         const p = privItem(item);
         const ref = fb.doc(col()); const n = newNote(p.text, p.img);
         await fb.setDoc(ref, n);
+        indexNote(ref.id);
         (notesCache[k] = notesCache[k] || []).unshift({ id: ref.id, ...n });
         setEntry(w, { pa: list });
         return true;
@@ -1163,6 +1393,7 @@ if (FIREBASE_CONFIG) {
       if (!old) return false;
       if (act === "hide") {
         await fb.deleteDoc(fb.doc(col(), id));
+        unindexNote(id);
         notesCache[k] = notesCache[k].filter((n) => n.id !== id);
         setEntry(w, { pa: (entry(w).pa || []).concat(old.img ? [{ text: old.text, img: old.img }] : [old.text]) });
         return true;
@@ -1203,6 +1434,7 @@ if (FIREBASE_CONFIG) {
       const ref = fb.doc(notesCol(ui.lang, w));
       const n = newNote(text, img);
       await fb.setDoc(ref, n);
+      indexNote(ref.id);
       (notesCache[ck(w)] = notesCache[ck(w)] || []).unshift({ id: ref.id, ...n });
       return true;
     } catch (e) { return false; }
@@ -1216,6 +1448,7 @@ if (FIREBASE_CONFIG) {
     }
     try {
       await fb.deleteDoc(fb.doc(notesCol(ui.lang, w), id));
+      unindexNote(id);
       notesCache[ck(w)] = (notesCache[ck(w)] || []).filter((n) => n.id !== id);
       return true;
     } catch (e) { return false; }
@@ -1228,6 +1461,20 @@ if (FIREBASE_CONFIG) {
     fetchNotes(lang, w).then(() => { notesLoading[k] = false; afterNotes(w, lang); });
   };
 }
+/* public counters: one tiny doc per member and per posted association */
+const indexNote = (id) => fb.setDoc(fb.doc(fb.db, "noteIndex", id), { uid: account.uid, t: Date.now() }).catch(() => {});
+const unindexNote = (id) => fb.deleteDoc(fb.doc(fb.db, "noteIndex", id)).catch(() => {});
+async function loadCounts() {
+  try {
+    await loadFirebase();
+    const [m, n] = await Promise.all([fb.count(fb.collection(fb.db, "members")), fb.count(fb.collection(fb.db, "noteIndex"))]);
+    const users = m.data().count, notes = n.data().count, el = $("siteCounts");
+    if (!users && !notes) return;
+    el.innerHTML = `<span>👥 ${users.toLocaleString("he-IL")} ${users === 1 ? "משתמש רשום" : "משתמשים רשומים"}</span><span>💬 ${notes.toLocaleString("he-IL")} ${notes === 1 ? "אסוציאציה פורסמה" : "אסוציאציות פורסמו"}</span>`;
+    el.hidden = false;
+  } catch (e) {}
+}
+
 /* after sign-in, associations written on this device move into the shared list */
 async function migrateLocalAssoc() {
   for (const lang of LANGS) {
@@ -1240,6 +1487,7 @@ async function migrateLocalAssoc() {
           const ref = fb.doc(notesCol(lang, w));
           const n = newNote(text);
           await fb.setDoc(ref, n);
+          indexNote(ref.id);
           if (notesCache[ck(w, lang)]) notesCache[ck(w, lang)].unshift({ id: ref.id, ...n });
         }
       } catch (err) { break; }
@@ -1288,10 +1536,11 @@ const savedUI = lsGet(LS_UI);
 if (!savedUI) ui.view = "how";   // first visit: start with the explanation
 if (savedUI && typeof savedUI === "object") {
   if (savedUI.lang === "en" || savedUI.lang === "he") ui.lang = savedUI.lang;
-  if (["practice", "list", "how"].includes(savedUI.view)) ui.view = savedUI.view;
+  if (["practice", "list", "how", "stats"].includes(savedUI.view)) ui.view = savedUI.view;
   if (typeof savedUI.unit === "string") ui.unit = savedUI.unit;
   if (savedUI.filter) for (const k of CHIP_ORDER) if (typeof savedUI.filter[k] === "boolean") ui.filter[k] = savedUI.filter[k];
   if (typeof savedUI.shuffle === "boolean") ui.shuffle = savedUI.shuffle;
+  if ([10, 20, 30, 50].includes(savedUI.goal)) ui.goal = savedUI.goal;
 }
 renderHeader();
 DICT = { en: WORDS.en, he: WORDS.he };
