@@ -113,6 +113,8 @@ kbd { font-family: var(--body); font-size: .72rem; border: 1px solid var(--line)
 .how-also p { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.55; }
 .how-also b { color: var(--ink); }
 .how-start { justify-self: start; }
+.how-keys kbd { font-size: .8rem; padding: 1px 6px; margin-inline: 2px; }
+@media (hover: none) { .how-keys { display: none; } }
 .small-link { font-size: .82rem; font-weight: 600; color: var(--muted); padding: 2px; }
 .hint { margin: 0; color: var(--muted); font-style: italic; text-align: center; white-space: pre-wrap; }
 .assoc { display: grid; gap: 8px; }
@@ -676,6 +678,7 @@ function renderHow() {
     <div class="how-also">
       <p><b>אסוציאציות.</b> כותבים לכל מילה טריק שעוזר לזכור, ורואים את הטריקים של משתמשים אחרים. 👍 למה שעובד, ⭐ למועדפים.</p>
       <p><b>משתמש.</b> מתחברים, וההתקדמות נשמרת ומסונכרנת בין הטלפון למחשב.</p>
+      <p class="how-keys"><b>קיצורי מקלדת במחשב.</b> <kbd>1</kbd> אדום · <kbd>2</kbd> כתום · <kbd>3</kbd> ירוק · <kbd>רווח</kbd> הצגת הפירוש או הסתרתו · <kbd>←</kbd> <kbd>→</kbd> מעבר בין מילים</p>
     </div>
     <button type="button" class="primary how-start" data-view="practice">להתחיל לתרגל</button>
   </section>`;
