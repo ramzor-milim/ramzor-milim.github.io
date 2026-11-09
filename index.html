@@ -170,6 +170,10 @@ dialog .google svg { width: 18px; height: 18px; flex: none; }
 dialog .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .82rem; margin-block: 4px; }
 dialog .or::before, dialog .or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
 
+.save-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.save-assoc { border: 0; background: var(--accent); color: var(--accent-ink); border-radius: 10px; padding: 8px 18px; font-weight: 700; }
+.save-assoc:disabled { opacity: .45; cursor: default; }
+.save-status { font-size: .85rem; color: var(--green); font-weight: 600; }
 .others { display: grid; gap: 6px; margin-top: 4px; }
 .others h4 { margin: 4px 0 0; font-size: .8rem; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
 .others .note-item { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; }
@@ -691,18 +695,15 @@ const notesCache = {};
 const noteKey = (w) => encodeURIComponent(w).replace(/\./g, "%2E");
 const notesCol = (lang, w) => fb.collection(fb.db, "shared", lang, "words", noteKey(w), "notes");
 const shareTimers = {};
-function shareAssoc(lang, w, text) {
-  if (!account || !fb) return;
-  const k = lang + "|" + w;
-  clearTimeout(shareTimers[k]);
-  shareTimers[k] = setTimeout(async () => {
-    const ref = fb.doc(notesCol(lang, w), account.uid);
-    const t = text.trim().slice(0, 500);
-    try {
-      if (t) await fb.setDoc(ref, { text: t, name: account.shareName.slice(0, 40), t: Date.now() });
-      else await fb.deleteDoc(ref);
-    } catch (e) {}
-  }, 1200);
+async function shareAssoc(lang, w, text) {
+  if (!account || !fb) return false;
+  const ref = fb.doc(notesCol(lang, w), account.uid);
+  const t = text.trim().slice(0, 500);
+  try {
+    if (t) await fb.setDoc(ref, { text: t, name: account.shareName.slice(0, 40), t: Date.now() });
+    else await fb.deleteDoc(ref);
+    return true;
+  } catch (e) { return false; }
 }
 async function loadNotes(lang, w, box) {
   if (!FIREBASE_CONFIG || !box) return;
@@ -713,23 +714,27 @@ async function loadNotes(lang, w, box) {
       const snap = await fb.getDocs(fb.query(notesCol(lang, w), fb.orderBy("t", "desc"), fb.limit(30)));
       notesCache[k] = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
     }
-  } catch (e) { return; }
+  } catch (e) { notesCache[k] = null; }
   if (!box.isConnected) return;
-  const others = notesCache[k].filter((n) => !account || n.uid !== account.uid);
+  const others = (notesCache[k] || []).filter((n) => !account || n.uid !== account.uid);
   box.innerHTML = (others.length
     ? `<h4>אסוציאציות של משתמשים אחרים (${others.length})</h4>` + others.map((n, i) => `
         <div class="note-item"><span class="note-text">${esc(n.text || "")}</span>
           <span class="note-meta"><span>${esc(n.name || "משתמש")}</span><button type="button" data-copy-note="${i}">להעתיק אליי</button></span></div>`).join("")
     : "")
-    + `<p class="hint-line">${account ? "האסוציאציה שלך גלויה לכל המשתמשים, עם השם " + esc(account.shareName) + "." : "התחברו כדי לשתף את האסוציאציה שלכם עם משתמשים אחרים."}</p>`;
+    + `<p class="hint-line">${account ? "אחרי שמירה, האסוציאציה שלך גלויה לכל המשתמשים עם השם " + esc(account.shareName) + "." : "התחברו כדי שגם משתמשים אחרים יראו את האסוציאציה שלכם."}</p>`;
   box._notes = others;
 }
 function attachNotes(textarea) {
   if (!FIREBASE_CONFIG || !textarea || textarea.dataset.notes) return;
   textarea.dataset.notes = "1";
+  const bar = document.createElement("div");
+  bar.className = "save-bar";
+  bar.innerHTML = `<button type="button" class="save-assoc">שמירה</button><span class="save-status" role="status"></span>`;
+  textarea.insertAdjacentElement("afterend", bar);
   const box = document.createElement("div");
   box.className = "others";
-  textarea.insertAdjacentElement("afterend", box);
+  bar.insertAdjacentElement("afterend", box);
   loadNotes(ui.lang, textarea.dataset.w, box);
 }
 const _renderPractice = renderPractice;
@@ -740,18 +745,32 @@ document.addEventListener("toggle", (e) => {
 }, true);
 document.addEventListener("input", (e) => {
   if (e.target.tagName === "TEXTAREA" && e.target.dataset.w) {
-    shareAssoc(ui.lang, e.target.dataset.w, e.target.value);
-    const k = ui.lang + "|" + e.target.dataset.w;
-    if (notesCache[k] && account) {
-      notesCache[k] = notesCache[k].filter((n) => n.uid !== account.uid);
-      if (e.target.value.trim()) notesCache[k].unshift({ uid: account.uid, text: e.target.value.trim(), name: account.shareName, t: Date.now() });
-    }
+    const bar = e.target.nextElementSibling;
+    if (bar && bar.classList.contains("save-bar")) { bar.querySelector(".save-status").textContent = ""; bar.querySelector(".save-assoc").disabled = false; }
   }
 });
 document.addEventListener("click", (e) => {
+  const sv = e.target.closest(".save-assoc");
+  if (sv) {
+    const bar = sv.parentElement, ta = bar.previousElementSibling, status = bar.querySelector(".save-status");
+    const w = ta.dataset.w, text = ta.value;
+    setEntry(w, { a: text.trim() ? text : "" });
+    if (!account) { status.textContent = "נשמר אצלך ✓"; sv.disabled = true; return; }
+    sv.disabled = true; status.textContent = "שומר…";
+    shareAssoc(ui.lang, w, text).then((ok) => {
+      const k = ui.lang + "|" + w;
+      if (notesCache[k]) {
+        notesCache[k] = notesCache[k].filter((n) => n.uid !== account.uid);
+        if (text.trim()) notesCache[k].unshift({ uid: account.uid, text: text.trim(), name: account.shareName, t: Date.now() });
+      }
+      status.textContent = ok ? (text.trim() ? "נשמר ושותף ✓" : "נמחק ✓") : "נשמר אצלך, אבל השיתוף לא הצליח. נסו שוב.";
+      sv.disabled = ok;
+    });
+    return;
+  }
   const b = e.target.closest("[data-copy-note]");
   if (!b) return;
-  const box = b.closest(".others"), ta = box && box.previousElementSibling;
+  const box = b.closest(".others"), ta = box && box.parentElement.querySelector("textarea[data-w]");
   const n = box && box._notes && box._notes[Number(b.dataset.copyNote)];
   if (!ta || !n) return;
   ta.value = ta.value.trim() ? ta.value.trim() + "\n" + n.text : n.text;
