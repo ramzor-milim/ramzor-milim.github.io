@@ -68,6 +68,7 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 .unit-opt:hover { background: var(--bg); }
 .unit-opt input { width: 16px; height: 16px; accent-color: var(--accent); }
 .unit-opt small { margin-inline-start: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+.unit-hint { margin: 0; font-size: .82rem; color: var(--accent); font-weight: 600; }
 .unit-actions { display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 6px; }
 .bar { display: flex; height: 8px; border-radius: 99px; overflow: hidden; background: var(--new-soft); }
 .bar span { display: block; height: 100%; transition: width .3s; }
@@ -675,7 +676,8 @@ function renderUnitSelect() {
   const opts = UNITS.map((u) => [String(u), "יחידה " + u, all.filter((x) => x.u === u).length]);
   if (state.c[ui.lang].length) opts.push(["mine", "המילים שלי", state.c[ui.lang].length]);
   $("unitMenu").innerHTML = `<div class="unit-grid">${opts.map(([v, l, n]) => `<label class="unit-opt"><input type="checkbox" class="unit-cb" value="${v}"${set.has(v) ? " checked" : ""}><span>${l}</span><small>${n}</small></label>`).join("")}</div>
-    <div class="unit-actions"><button type="button" class="link" id="unitAll">כל היחידות</button><button type="button" class="link" id="unitDone">סגירה</button></div>`;
+    <p class="unit-hint" id="unitHint" hidden>סמנו את היחידות שאתם רוצים לתרגל.</p>
+    <div class="unit-actions"><span><button type="button" class="link" id="unitAll">כל היחידות</button> · <button type="button" class="link" id="unitNone">ניקוי הכל</button></span><button type="button" class="link" id="unitDone">סגירה</button></div>`;
 }
 function applyUnitChecks() {
   const boxes = [...document.querySelectorAll(".unit-cb")];
@@ -1062,6 +1064,7 @@ document.addEventListener("click", (e) => {
   if (t.id === "undoBtn") { undoRate(); return; }
   if (t.id === "unitAll") { ui.unit = "all"; saveUI(); resetView(); return; }
   if (t.id === "unitDone") { $("unitPick").open = false; return; }
+  if (t.id === "unitNone") { document.querySelectorAll(".unit-cb").forEach((b) => { b.checked = false; }); $("unitHint").hidden = false; return; }
   if (t.dataset.unitJump) { ui.unit = t.dataset.unitJump; ui.view = "practice"; saveUI(); resetView(); window.scrollTo(0, 0); return; }
   if (t.classList.contains("signup-link")) { const a = document.getElementById("acctBtn"); if (a && !a.hidden) a.click(); return; }
   if (t.id === "nextBtn") { pos++; revealed = false; hint = false; renderPractice(); return; }
