@@ -116,6 +116,7 @@ kbd { font-family: var(--body); font-size: .72rem; border: 1px solid var(--line)
 .undo-bar { margin-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
   background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; font-size: .9rem; color: var(--muted); }
 .undo-bar b { color: var(--ink); }
+.undo-more { font-size: .8rem; }
 .undo-bar button { border: 1px solid var(--accent); background: transparent; color: var(--accent); border-radius: 10px; padding: 5px 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
 @media (hover: none) { .undo-bar kbd { display: none; } }
 .how-keys kbd { font-size: .8rem; padding: 1px 6px; margin-inline: 2px; }
@@ -322,7 +323,7 @@ let DICT = null; // {en: [[word, meaning, unit]], he: [...]}
 let state = { p: { en: {}, he: {} }, c: { en: [], he: [] } };
 let ui = { lang: "en", view: "practice", unit: "1", filter: { r: true, o: true, g: false, n: true }, shuffle: true };
 let queue = [], pos = 0, revealed = false, hint = false, pendingDelete = null, listShown = PAGE, query = "";
-let lastRate = null;   // {w, prev, s, pos} of the most recent rating, for undo
+let undoStack = [];   // [{w, prev, s, pos}], most recent last; cleared when the round is rebuilt
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -538,7 +539,7 @@ function renderHeader() {
 
 /* ---------- Practice ---------- */
 function buildQueue() {
-  lastRate = null;
+  undoStack = [];
   queue = words().filter((x) => ui.filter[statusOf(x.w)]);
   if (ui.shuffle) for (let i = queue.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [queue[i], queue[j]] = [queue[j], queue[i]]; }
   pos = 0; revealed = false; hint = false;
@@ -596,24 +597,26 @@ const COLOR_NAME = { g: "ירוק", o: "כתום", r: "אדום", n: "לא מס�
 function rate(s) {
   if (pos >= queue.length) return;
   const w = queue[pos].w;
-  lastRate = { w, prev: statusOf(w), s, pos };
+  undoStack.push({ w, prev: statusOf(w), s, pos });
+  if (undoStack.length > 50) undoStack.shift();
   setEntry(w, { s });
   pos++; revealed = false; hint = false;
   renderHeader(); renderPractice(); showUndo();
 }
 function showUndo() {
-  if (!lastRate || ui.view !== "practice") return;
+  const last = undoStack[undoStack.length - 1];
+  if (!last || ui.view !== "practice") return;
+  const more = undoStack.length > 1 ? ` <span class="undo-more">(אפשר לבטל עוד ${undoStack.length - 1})</span>` : "";
   $("main").insertAdjacentHTML("beforeend", `<div class="undo-bar" role="status">
-    <span><b dir="auto">${esc(lastRate.w)}</b> סומנה <span class="dot s-${lastRate.s}"></span> ${COLOR_NAME[lastRate.s]}</span>
+    <span><b dir="auto">${esc(last.w)}</b> סומנה <span class="dot s-${last.s}"></span> ${COLOR_NAME[last.s]}${more}</span>
     <button type="button" id="undoBtn">ביטול <kbd>Ctrl+Z</kbd></button></div>`);
 }
 function undoRate() {
-  if (!lastRate) return;
-  const { w, prev, pos: p } = lastRate;
-  lastRate = null;
-  setEntry(w, { s: prev });
-  pos = p; revealed = false; hint = false;
-  renderHeader(); renderPractice();
+  const last = undoStack.pop();
+  if (!last) return;
+  setEntry(last.w, { s: last.prev });
+  pos = last.pos; revealed = false; hint = false;
+  renderHeader(); renderPractice(); showUndo();
 }
 
 /* ---------- List ---------- */
@@ -703,7 +706,7 @@ function renderHow() {
     <div class="how-also">
       <p><b>אסוציאציות.</b> כותבים לכל מילה טריק שעוזר לזכור, ורואים את הטריקים של משתמשים אחרים. 👍 למה שעובד, ⭐ למועדפים.</p>
       <p><b>משתמש.</b> מתחברים, וההתקדמות נשמרת ומסונכרנת בין הטלפון למחשב.</p>
-      <p class="how-keys"><b>קיצורי מקלדת במחשב.</b> <kbd>1</kbd> ירוק · <kbd>2</kbd> כתום · <kbd>3</kbd> אדום · <kbd>רווח</kbd> הצגת הפירוש או הסתרתו · <kbd>←</kbd> <kbd>→</kbd> מעבר בין מילים · <kbd>Ctrl+Z</kbd> ביטול הסימון האחרון</p>
+      <p class="how-keys"><b>קיצורי מקלדת במחשב.</b> <kbd>1</kbd> ירוק · <kbd>2</kbd> כתום · <kbd>3</kbd> אדום · <kbd>רווח</kbd> הצגת הפירוש או הסתרתו · <kbd>←</kbd> <kbd>→</kbd> מעבר בין מילים · <kbd>Ctrl+Z</kbd> ביטול הסימונים האחרונים, צעד אחר צעד</p>
     </div>
     <button type="button" class="primary how-start" data-view="practice">להתחיל לתרגל</button>
   </section>`;
@@ -886,7 +889,7 @@ document.addEventListener("submit", (e) => {
   $("addMsg").textContent = `"${w}" נוספה ל"המילים שלי".`;
 });
 document.addEventListener("keydown", (e) => {
-  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "z" || e.key === "Z" || e.key === "ז") && !e.target.closest("textarea, input") && lastRate && ui.view === "practice") {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "z" || e.key === "Z" || e.key === "ז") && !e.target.closest("textarea, input") && undoStack.length && ui.view === "practice") {
     e.preventDefault(); undoRate(); return;
   }
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.target.closest(".composer") && matchMedia("(hover: hover)").matches) {
