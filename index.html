@@ -169,6 +169,14 @@ dialog .google { border: 1px solid var(--line); background: var(--bg); border-ra
 dialog .google svg { width: 18px; height: 18px; flex: none; }
 dialog .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .82rem; margin-block: 4px; }
 dialog .or::before, dialog .or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+
+.others { display: grid; gap: 6px; margin-top: 4px; }
+.others h4 { margin: 4px 0 0; font-size: .8rem; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
+.others .note-item { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; }
+.others .note-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.others .note-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .78rem; color: var(--muted); }
+.others .note-meta button { border: 0; background: none; color: var(--accent); font-weight: 700; padding: 2px 0; font-size: .78rem; }
+.others .hint-line { margin: 0; font-size: .8rem; color: var(--muted); }
 dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: default; }
 </style>
 </head>
@@ -579,7 +587,8 @@ async function loadFirebase() {
     signIn: authM.signInWithEmailAndPassword, signUp: authM.createUserWithEmailAndPassword,
     signOut: authM.signOut, onAuth: authM.onAuthStateChanged,
     googlePopup: () => authM.signInWithPopup(fb.auth, new authM.GoogleAuthProvider()),
-    doc: fsM.doc, getDoc: fsM.getDoc, setDoc: fsM.setDoc, onSnapshot: fsM.onSnapshot
+    doc: fsM.doc, getDoc: fsM.getDoc, setDoc: fsM.setDoc, onSnapshot: fsM.onSnapshot,
+    collection: fsM.collection, getDocs: fsM.getDocs, query: fsM.query, orderBy: fsM.orderBy, limit: fsM.limit, deleteDoc: fsM.deleteDoc
   };
   return fb;
 }
@@ -607,6 +616,7 @@ async function startAccounts() {
     if (!u) { account = null; renderAccount(); localSyncText(); return; }
     const viaPassword = (u.email || "").endsWith("@ramzor-milim.app");
     account = { uid: u.uid, name: viaPassword ? userName(u.email) : (u.displayName || u.email || "משתמש Google") };
+    account.shareName = (viaPassword ? account.name : (u.displayName || "").split(" ")[0]) || "משתמש";
     renderAccount(); setSync("מסנכרן עם המשתמש…");
     try {
       for (const lang of LANGS) {
@@ -674,6 +684,79 @@ document.addEventListener("submit", async (e) => {
     err.textContent = AUTH_ERRORS[ex && ex.code] || "משהו השתבש. נסו שוב בעוד רגע.";
   }
   $("loginBtn").disabled = $("signupBtn").disabled = false;
+});
+
+/* shared associations: every signed-in user's association is visible to everyone */
+const notesCache = {};
+const noteKey = (w) => encodeURIComponent(w).replace(/\./g, "%2E");
+const notesCol = (lang, w) => fb.collection(fb.db, "shared", lang, "words", noteKey(w), "notes");
+const shareTimers = {};
+function shareAssoc(lang, w, text) {
+  if (!account || !fb) return;
+  const k = lang + "|" + w;
+  clearTimeout(shareTimers[k]);
+  shareTimers[k] = setTimeout(async () => {
+    const ref = fb.doc(notesCol(lang, w), account.uid);
+    const t = text.trim().slice(0, 500);
+    try {
+      if (t) await fb.setDoc(ref, { text: t, name: account.shareName.slice(0, 40), t: Date.now() });
+      else await fb.deleteDoc(ref);
+    } catch (e) {}
+  }, 1200);
+}
+async function loadNotes(lang, w, box) {
+  if (!FIREBASE_CONFIG || !box) return;
+  const k = lang + "|" + w;
+  try {
+    await loadFirebase();
+    if (!notesCache[k]) {
+      const snap = await fb.getDocs(fb.query(notesCol(lang, w), fb.orderBy("t", "desc"), fb.limit(30)));
+      notesCache[k] = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+    }
+  } catch (e) { return; }
+  if (!box.isConnected) return;
+  const others = notesCache[k].filter((n) => !account || n.uid !== account.uid);
+  box.innerHTML = (others.length
+    ? `<h4>אסוציאציות של משתמשים אחרים (${others.length})</h4>` + others.map((n, i) => `
+        <div class="note-item"><span class="note-text">${esc(n.text || "")}</span>
+          <span class="note-meta"><span>${esc(n.name || "משתמש")}</span><button type="button" data-copy-note="${i}">להעתיק אליי</button></span></div>`).join("")
+    : "")
+    + `<p class="hint-line">${account ? "האסוציאציה שלך גלויה לכל המשתמשים, עם השם " + esc(account.shareName) + "." : "התחברו כדי לשתף את האסוציאציה שלכם עם משתמשים אחרים."}</p>`;
+  box._notes = others;
+}
+function attachNotes(textarea) {
+  if (!FIREBASE_CONFIG || !textarea || textarea.dataset.notes) return;
+  textarea.dataset.notes = "1";
+  const box = document.createElement("div");
+  box.className = "others";
+  textarea.insertAdjacentElement("afterend", box);
+  loadNotes(ui.lang, textarea.dataset.w, box);
+}
+const _renderPractice = renderPractice;
+renderPractice = function () { _renderPractice(); attachNotes($("assoc")); };
+document.addEventListener("toggle", (e) => {
+  const row = e.target;
+  if (row.classList && row.classList.contains("row") && row.open) attachNotes(row.querySelector("textarea[data-w]"));
+}, true);
+document.addEventListener("input", (e) => {
+  if (e.target.tagName === "TEXTAREA" && e.target.dataset.w) {
+    shareAssoc(ui.lang, e.target.dataset.w, e.target.value);
+    const k = ui.lang + "|" + e.target.dataset.w;
+    if (notesCache[k] && account) {
+      notesCache[k] = notesCache[k].filter((n) => n.uid !== account.uid);
+      if (e.target.value.trim()) notesCache[k].unshift({ uid: account.uid, text: e.target.value.trim(), name: account.shareName, t: Date.now() });
+    }
+  }
+});
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-copy-note]");
+  if (!b) return;
+  const box = b.closest(".others"), ta = box && box.previousElementSibling;
+  const n = box && box._notes && box._notes[Number(b.dataset.copyNote)];
+  if (!ta || !n) return;
+  ta.value = ta.value.trim() ? ta.value.trim() + "\n" + n.text : n.text;
+  ta.dispatchEvent(new Event("input", { bubbles: true }));
+  b.textContent = "הועתק";
 });
 
 /* backup file */
