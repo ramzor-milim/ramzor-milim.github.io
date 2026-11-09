@@ -100,6 +100,16 @@ kbd { font-family: var(--body); font-size: .72rem; border: 1px solid var(--line)
 .note-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .78rem; color: var(--muted); }
 .note-meta button { border: 0; background: none; color: var(--accent); font-weight: 700; padding: 2px 0; font-size: .78rem; }
 .note-meta button.del-note { color: var(--red); }
+.star { border: 0; background: none; padding: 0 2px; font-size: 1.15rem; line-height: 1; color: var(--muted); cursor: pointer; }
+.star[aria-pressed="true"] { color: var(--orange); }
+.note-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: start; }
+.notes .fav-item { border-color: var(--orange); background: var(--orange-soft); }
+.note-actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: flex-end; }
+.vis { display: inline-flex; align-items: center; gap: 5px; }
+.vis::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+.vis[data-v="anon"]::before { background: var(--orange); }
+.vis[data-v="private"]::before { background: var(--new); }
+.vis:empty::before { display: none; }
 .assoc-empty, .assoc-note { margin: 0; font-size: .82rem; color: var(--muted); }
 .assoc-msg { margin: 0; font-size: .82rem; color: var(--red); font-weight: 600; }
 .assoc-msg:empty { display: none; }
@@ -284,6 +294,10 @@ function normLang(d) {
       if (typeof e.a === "string") e.a = e.a.trim() ? [e.a] : [];
       else if (e.a && !Array.isArray(e.a)) e.a = [];
       if (Array.isArray(e.a) && !e.a.length) delete e.a;
+      if (e.pa && !Array.isArray(e.pa)) delete e.pa;
+      if (e.f && !Array.isArray(e.f)) delete e.f;
+      if (Array.isArray(e.f) && !e.f.length) delete e.f;
+      if (Array.isArray(e.pa) && !e.pa.length) delete e.pa;
     }
   }
   if (Array.isArray(d.c)) o.c = d.c.filter((x) => x && x.w).map((x) => ({ w: String(x.w), m: String(x.m || "") }));
@@ -320,6 +334,8 @@ const localMine = (w, lang = ui.lang) => (entry(w, lang).a || []).map((text, i) 
 function setEntry(w, patch, lang = ui.lang) {
   const cur = { ...entry(w, lang), ...patch };
   if (!cur.a || !cur.a.length) delete cur.a;
+  if (!cur.pa || !cur.pa.length) delete cur.pa;
+  if (!cur.f || !cur.f.length) delete cur.f;
   if (!cur.s || cur.s === "n") delete cur.s;
   if (Object.keys(cur).length) state.p[lang][w] = cur; else delete state.p[lang][w];
   save(lang);
@@ -331,28 +347,49 @@ const Assoc = {
   mine: (w) => localMine(w),
   add: async (w, text) => { setEntry(w, { a: (entry(w).a || []).concat(text) }); return true; },
   remove: async (w, id) => { const a = (entry(w).a || []).slice(); a.splice(Number(id), 1); setEntry(w, { a }); return true; },
+  act: async () => false,       // visibility changes (public build only)
   others: () => null,           // [{text, name}], or null when sharing isn't available
   note: () => "",
   prefetch: () => {}
 };
-const hasMine = (w) => Assoc.mine(w).length > 0;
+const hasMine = (w) => Assoc.mine(w).length > 0 || (entry(w).f || []).length > 0;
+const favKey = (n) => n.text.trim();
+const favsOf = (w) => new Set(entry(w).f || []);
+function toggleFav(w, key) {
+  const f = (entry(w).f || []).slice(), i = f.indexOf(key);
+  if (i >= 0) f.splice(i, 1); else f.push(key);
+  setEntry(w, { f });
+}
+function noteHTML(n, kind, i, starred) {
+  const star = `<button type="button" class="star" data-fav="${esc(favKey(n))}" aria-pressed="${starred}" aria-label="${starred ? "הסרה מהמועדפים" : "שמירה למועדפים"}" title="${starred ? "הסרה מהמועדפים" : "שמירה למועדפים"}">${starred ? "★" : "☆"}</button>`;
+  const meta = kind === "mine"
+    ? `<span class="vis" data-v="${n.vis || ""}">${esc(n.badge || "")}</span><span class="note-actions">${(n.actions || []).map((a) => `<button type="button" class="act-note" data-act="${a.key}" data-note="${esc(n.id)}">${a.label}</button>`).join("")}<button type="button" class="del-note" data-note="${esc(n.id)}">מחיקה</button></span>`
+    : `<span>${esc(n.name || "אנונימי")}</span><button type="button" class="copy-note" data-i="${i}">להעתיק אליי</button>`;
+  return `<li class="${kind === "mine" ? "mine-item" : ""}${starred ? " fav-item" : ""}"><span class="note-head"><span class="note-text">${esc(n.text)}</span>${star}</span>
+    <span class="note-meta">${meta}</span></li>`;
+}
 function assocHTML(w) {
-  const mine = Assoc.mine(w), others = Assoc.others(w), note = Assoc.note();
-  const mineHTML = mine.length
-    ? `<ul class="notes">${mine.map((n) => `<li class="mine-item"><span class="note-text">${esc(n.text)}</span>
-        <span class="note-meta"><span></span><button type="button" class="del-note" data-note="${esc(n.id)}">מחיקה</button></span></li>`).join("")}</ul>`
-    : `<p class="assoc-empty">עוד אין לך אסוציאציה למילה הזו.</p>`;
-  const othersHTML = others === null ? "" : `<h4>אסוציאציות של משתמשים אחרים${others.length ? ` (${others.length})` : ""}</h4>`
-    + (others.length
-      ? `<ul class="notes">${others.map((n, i) => `<li><span class="note-text">${esc(n.text)}</span>
-          <span class="note-meta"><span>${esc(n.name || "משתמש")}</span><button type="button" class="copy-note" data-i="${i}">להעתיק אליי</button></span></li>`).join("")}</ul>`
-      : `<p class="assoc-empty">עוד אין אסוציאציות של אחרים למילה הזו.</p>`);
+  const mine = Assoc.mine(w), others = Assoc.others(w), note = Assoc.note(), favs = favsOf(w);
+  const isFav = (n) => favs.has(favKey(n));
+  const othersAll = others || [];
+  const favItems = mine.filter(isFav).map((n) => noteHTML(n, "mine", 0, true))
+    .concat(othersAll.map((n, i) => [n, i]).filter(([n]) => isFav(n)).map(([n, i]) => noteHTML(n, "other", i, true)));
+  const mineRest = mine.filter((n) => !isFav(n));
+  const othersRest = othersAll.map((n, i) => [n, i]).filter(([n]) => !isFav(n));
+  const mineHTML = mineRest.length
+    ? `<ul class="notes">${mineRest.map((n) => noteHTML(n, "mine", 0, false)).join("")}</ul>`
+    : `<p class="assoc-empty">${mine.length ? "כל האסוציאציות שלך במועדפים." : "עוד אין לך אסוציאציה למילה הזו."}</p>`;
+  const othersHTML = others === null ? "" : `<h4>אסוציאציות של משתמשים אחרים${othersRest.length ? ` (${othersRest.length})` : ""}</h4>`
+    + (othersRest.length
+      ? `<ul class="notes">${othersRest.map(([n, i]) => noteHTML(n, "other", i, false)).join("")}</ul>`
+      : `<p class="assoc-empty">${othersAll.length ? "כל האסוציאציות של אחרים כבר במועדפים שלך." : "עוד אין אסוציאציות של אחרים למילה הזו."}</p>`);
   return `<div class="assoc" data-w="${esc(w)}">
     <form class="composer">
       <textarea rows="1" aria-label="אסוציאציה חדשה" placeholder="אסוציאציה חדשה: מילה שנשמעת דומה, תמונה, משפט…"></textarea>
       <button type="submit">שמירה</button>
     </form>
     <p class="assoc-msg" role="alert"></p>
+    ${favItems.length ? `<h4>★ המועדפים שלי</h4><ul class="notes">${favItems.join("")}</ul>` : ""}
     <h4>האסוציאציות שלי</h4>
     ${mineHTML}
     ${note ? `<p class="assoc-note">${note}</p>` : ""}
@@ -429,7 +466,8 @@ function renderPractice() {
     return;
   }
   const item = queue[pos], w = item.w;
-  const s = statusOf(w), a = Assoc.mine(w).map((n) => n.text).join("\n");
+  const favTexts = [...favsOf(w)];
+  const s = statusOf(w), a = [...new Set(favTexts.concat(Assoc.mine(w).map((n) => n.text)))].join("\n");
   Assoc.prefetch(w);
   main.innerHTML = `
     <div class="card" data-s="${s}">
@@ -541,6 +579,21 @@ document.addEventListener("click", (e) => {
     Assoc.remove(w, t.dataset.note).then((ok) => {
       if (ok) refreshAssoc(w);
       else { t.disabled = false; t.closest(".assoc").querySelector(".assoc-msg").textContent = "המחיקה לא הצליחה. נסו שוב."; }
+    });
+    return;
+  }
+  if (t.dataset.fav !== undefined && t.classList.contains("star")) {
+    const w = t.closest(".assoc").dataset.w;
+    toggleFav(w, t.dataset.fav);
+    refreshAssoc(w);
+    return;
+  }
+  if (t.classList.contains("act-note")) {
+    const w = t.closest(".assoc").dataset.w;
+    t.disabled = true;
+    Assoc.act(w, t.dataset.note, t.dataset.act).then((ok) => {
+      if (ok) refreshAssoc(w);
+      else { t.disabled = false; t.closest(".assoc").querySelector(".assoc-msg").textContent = "השינוי לא הצליח. בדקו את החיבור לאינטרנט ונסו שוב."; }
     });
     return;
   }
@@ -798,12 +851,58 @@ function afterNotes(w, lang) {
   } else refreshAssoc(w);
 }
 if (FIREBASE_CONFIG) {
-  Assoc.mine = (w) => account
-    ? (notesCache[ck(w)] || []).filter((n) => n.uid === account.uid).map((n) => ({ id: n.id, text: n.text }))
-    : localMine(w);
+  Assoc.mine = (w) => {
+    if (!account) return localMine(w);
+    const shared = (notesCache[ck(w)] || []).filter((n) => n.uid === account.uid).map((n) => {
+      const anon = !n.name;
+      return {
+        id: n.id, text: n.text, vis: anon ? "anon" : "named",
+        badge: anon ? "גלוי לכולם, בלי שם" : `גלוי לכולם בשם ${n.name}`,
+        actions: [anon ? { key: "named", label: "להציג את שמי" } : { key: "anon", label: "להפוך לאנונימי" }, { key: "hide", label: "להסתיר מכולם" }]
+      };
+    });
+    const priv = (entry(w).pa || []).map((text, i) => ({
+      id: "p" + i, text, vis: "private", badge: "מוסתר מכולם", actions: [{ key: "share", label: "לשתף" }]
+    }));
+    return shared.concat(priv);
+  };
+  Assoc.act = async (w, id, act) => {
+    if (!account) return false;
+    const k = ck(w), col = () => notesCol(ui.lang, w);
+    try {
+      await loadFirebase();
+      if (act === "share") {
+        const list = (entry(w).pa || []).slice();
+        const [text] = list.splice(Number(id.slice(1)), 1);
+        if (text === undefined) return false;
+        const ref = fb.doc(col()); const n = newNote(text);
+        await fb.setDoc(ref, n);
+        (notesCache[k] = notesCache[k] || []).unshift({ id: ref.id, ...n });
+        setEntry(w, { pa: list });
+        return true;
+      }
+      const old = (notesCache[k] || []).find((n) => n.id === id && n.uid === account.uid);
+      if (!old) return false;
+      if (act === "hide") {
+        await fb.deleteDoc(fb.doc(col(), id));
+        notesCache[k] = notesCache[k].filter((n) => n.id !== id);
+        setEntry(w, { pa: (entry(w).pa || []).concat(old.text) });
+        return true;
+      }
+      if (act === "anon" || act === "named") {
+        const ref = fb.doc(col());
+        const n = { uid: account.uid, text: old.text, name: act === "anon" ? "" : account.shareName.slice(0, 40), t: old.t || Date.now() };
+        await fb.setDoc(ref, n);
+        await fb.deleteDoc(fb.doc(col(), id));
+        notesCache[k] = notesCache[k].map((x) => (x.id === id ? { id: ref.id, ...n } : x));
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  };
   Assoc.others = (w) => (notesCache[ck(w)] || []).filter((n) => !account || n.uid !== account.uid);
   Assoc.note = () => account
-    ? `האסוציאציות שלך גלויות לכל המשתמשים, עם השם ${esc(account.shareName)}.`
+    ? `אסוציאציה חדשה גלויה לכולם בשם ${esc(account.shareName)}. לכל אסוציאציה אפשר לבחור להפוך לאנונימית או להסתיר מכולם.`
     : "בלי משתמש, האסוציאציות שלך נשמרות רק בדפדפן הזה. התחברו כדי לשמור אותן במשתמש ולשתף עם אחרים.";
   Assoc.add = async (w, text) => {
     if (!account) return localAdd(w, text);
@@ -818,6 +917,11 @@ if (FIREBASE_CONFIG) {
   };
   Assoc.remove = async (w, id) => {
     if (!account) return localRemove(w, id);
+    if (id.startsWith("p")) {
+      const list = (entry(w).pa || []).slice(); list.splice(Number(id.slice(1)), 1);
+      setEntry(w, { pa: list });
+      return true;
+    }
     try {
       await fb.deleteDoc(fb.doc(notesCol(ui.lang, w), id));
       notesCache[ck(w)] = (notesCache[ck(w)] || []).filter((n) => n.id !== id);
