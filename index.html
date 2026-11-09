@@ -160,7 +160,8 @@ kbd { font-family: var(--body); font-size: .72rem; border: 1px solid var(--line)
 textarea { width: 100%; min-height: 64px; resize: vertical; border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; background: var(--bg); line-height: 1.45; }
 textarea::placeholder, input::placeholder { color: var(--muted); opacity: .8; }
 
-.rate { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.rate { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; direction: ltr; } /* same left-to-right order as keys 1 2 3 */
+.rate button { direction: rtl; }
 .rate button { border: 1.5px solid; border-radius: 14px; padding: 12px 6px; font-weight: 700; display: grid; justify-items: center; gap: 2px; transition: transform .1s; }
 .rate button:active { transform: scale(.97); }
 .rate small { font-weight: 400; font-size: .72rem; opacity: .8; }
