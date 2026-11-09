@@ -482,29 +482,29 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
 
 <dialog id="acctDlg" dir="rtl" lang="he">
   <div class="pane" id="acctOut">
-    <h2>משתמשת</h2>
-    <p class="note">עם משתמשת, הצבעים והאסוציאציות נשמרים ונטענים בכל מכשיר שמתחברת ממנו.</p>
+    <h2>משתמש</h2>
+    <p class="note">עם משתמש, הצבעים והאסוציאציות נשמרים ונטענים בכל מכשיר שמתחברים ממנו.</p>
     <button type="button" class="google" id="googleBtn"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>כניסה עם Google</button>
     <p class="err" id="googleErr" role="alert"></p>
-    <div class="or">או עם שם משתמשת וסיסמה</div>
+    <div class="or">או עם שם משתמש וסיסמה</div>
     <form id="acctForm" novalidate>
-      <label for="acctUser">שם משתמשת</label>
+      <label for="acctUser">שם משתמש</label>
       <input id="acctUser" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="30">
       <label for="acctPass">סיסמה (לפחות 6 תווים)</label>
       <input id="acctPass" name="password" type="password" autocomplete="current-password">
       <p class="err" id="acctErr" role="alert"></p>
       <div class="btns">
         <button type="submit" class="primary" id="loginBtn" value="login">כניסה</button>
-        <button type="submit" class="secondary" id="signupBtn" value="signup">יצירת משתמשת חדשה</button>
+        <button type="submit" class="secondary" id="signupBtn" value="signup">יצירת משתמש חדש</button>
       </div>
-      <p class="note">אין אפשרות לשחזר סיסמה שנשכחה, אז כדאי שתרשמי אותה במקום בטוח.</p>
+      <p class="note">אין אפשרות לשחזר סיסמה שנשכחה, אז כדאי לרשום אותה במקום בטוח.</p>
     </form>
   </div>
   <div class="pane" id="acctIn" hidden>
-    <h2>משתמשת</h2>
-    <p>מחוברת בתור <b id="acctName"></b></p>
-    <p class="note">ההתקדמות נשמרת במשתמשת ומסונכרנת בין המכשירים.</p>
-    <div class="btns"><button type="button" class="secondary" id="logoutBtn">יציאה מהמשתמשת</button></div>
+    <h2>משתמש</h2>
+    <p>מחובר/ת בתור <b id="acctName"></b></p>
+    <p class="note">ההתקדמות נשמרת במשתמש ומסונכרנת בין המכשירים.</p>
+    <div class="btns"><button type="button" class="secondary" id="logoutBtn">יציאה מהמשתמש</button></div>
   </div>
   <button type="button" class="link" id="acctClose">סגירה</button>
 </dialog>
@@ -671,7 +671,7 @@ function noteHTML(n, kind, i, starred) {
   const star = `<button type="button" class="star" data-fav="${esc(favKey(n))}" aria-pressed="${starred}" aria-label="${starred ? "הסרה מהמועדפים" : "שמירה למועדפים"}" title="${starred ? "הסרה מהמועדפים" : "שמירה למועדפים"}">${starred ? "★" : "☆"}</button>`;
   const meta = kind === "mine"
     ? `<span class="vis" data-v="${n.vis || ""}">${esc(n.badge || "")}</span><span class="note-actions">${(n.actions || []).map((a) => `<button type="button" class="act-note" data-act="${a.key}" data-note="${esc(n.id)}">${a.label}</button>`).join("")}<button type="button" class="del-note" data-note="${esc(n.id)}">מחיקה</button></span>`
-    : `<span>${esc(n.name || "אנונימית")}</span><span class="note-actions">${kind === "hidden"
+    : `<span>${esc(n.name || "אנונימי")}</span><span class="note-actions">${kind === "hidden"
         ? `<button type="button" class="unhide-note" data-key="${esc(favKey(n))}">ביטול הסתרה</button>`
         : `<button type="button" class="hide-note" data-key="${esc(favKey(n))}">הסתרה</button>`}</span>`;
   const likes = n.likeCount === undefined || kind === "hidden" ? ""
@@ -705,15 +705,15 @@ function assocHTML(w) {
     ? `<ul class="notes">${mineRest.map((n) => noteHTML(n, "mine", 0, false)).join("")}</ul>`
     : `<p class="assoc-empty">${mine.length ? "כל האסוציאציות שלך במועדפים." : "עוד אין לך אסוציאציה למילה הזו."}</p>`;
   const othersHTML = Assoc.othersLocked()
-    ? `<h4>אסוציאציות של משתמשות אחרות</h4><p class="assoc-empty locked">🔒 אסוציאציות של משתמשות אחרות זמינות למשתמשות רשומות. <button type="button" class="link signup-link">להתחברות או הרשמה</button></p>`
-    : others === null ? "" : `<h4>אסוציאציות של משתמשות אחרות${othersRest.length ? ` (${othersRest.length})` : ""}</h4>`
+    ? `<h4>אסוציאציות של משתמשים אחרים</h4><p class="assoc-empty locked">🔒 אסוציאציות של משתמשים אחרים זמינות למשתמשים רשומים. <button type="button" class="link signup-link">להתחברות או הרשמה</button></p>`
+    : others === null ? "" : `<h4>אסוציאציות של משתמשים אחרים${othersRest.length ? ` (${othersRest.length})` : ""}</h4>`
     + (othersRest.length
       ? `<ul class="notes">${othersRest.map(([n, i]) => noteHTML(n, "other", i, false)).join("")}</ul>`
       : `<p class="assoc-empty">${othersAll.length ? "אין עוד אסוציאציות של אחרים להציג." : "עוד אין אסוציאציות של אחרים למילה הזו."}</p>`)
     + hiddenHTML;
   return `<div class="assoc" data-w="${esc(w)}">
     <form class="composer"${Assoc.canImage() ? ` style="grid-template-columns: minmax(0, 1fr) auto auto"` : ""}>
-      <textarea rows="1" aria-label="אסוציאציה חדשה" placeholder="${Assoc.canImage() ? "אסוציאציה חדשה, או גררי לכאן תמונה…" : "אסוציאציה חדשה: מילה שנשמעת דומה, תמונה, משפט…"}"></textarea>
+      <textarea rows="1" aria-label="אסוציאציה חדשה" placeholder="${Assoc.canImage() ? "אסוציאציה חדשה, או גררו לכאן תמונה…" : "אסוציאציה חדשה: מילה שנשמעת דומה, תמונה, משפט…"}"></textarea>
       ${Assoc.canImage() ? `<button type="button" class="img-btn" aria-label="הוספת תמונה" title="הוספת תמונה">🖼️</button><input type="file" class="img-input" accept="image/*" hidden>` : ""}
       <button type="submit">שמירה</button>
       <div class="img-preview" hidden></div>
@@ -829,7 +829,7 @@ function renderUnitSelect() {
   $("unitMenu").innerHTML = `<div class="unit-grid">${opts.map(optHTML).join("")}</div>
     ${pl ? `<h5 class="plan-head">תוכנית הלימוד שלי <small>${pl.days.length} ימים · ${pl.size} מילים ביום</small></h5>
       <div class="unit-grid plan-grid">${pl.days.map((ws, i) => optHTML(["d" + (i + 1), "יום " + (i + 1), ws.length])).join("")}</div>` : ""}
-    <p class="unit-hint" id="unitHint" hidden>סמני את היחידות שאת רוצה לתרגל.</p>
+    <p class="unit-hint" id="unitHint" hidden>סמנו את היחידות שאתם רוצים לתרגל.</p>
     <div class="unit-actions"><span><button type="button" class="link" id="unitAll">כל היחידות</button> · <button type="button" class="link" id="unitNone">ניקוי הכל</button></span><button type="button" class="link" id="unitDone">סגירה</button></div>`;
 }
 function applyUnitChecks() {
@@ -875,7 +875,7 @@ function renderPractice() {
   if (!queue.length) {
     const active = CHIP_ORDER.filter((s) => ui.filter[s]);
     main.innerHTML = `<div class="empty"><h2>${active.length ? "אין מילים בצבעים שבחרת" : "לא נבחר אף צבע"}</h2>
-      <p>בחרי למעלה יחידה אחרת או צבעים אחרים לתרגול, למשל רק אדום וכתום.</p></div>`;
+      <p>בחרו למעלה יחידה אחרת או צבעים אחרים לתרגול, למשל רק אדום וכתום.</p></div>`;
     return;
   }
   if (pos >= queue.length) {
@@ -1046,7 +1046,7 @@ function stackBar(cc, total) {
 }
 function todayWordsHTML(today) {
   const list = Object.values(today.w || {});
-  if (!list.length) return `<div class="stat-card"><h3>מה עשית היום</h3><p class="muted-note">עוד לא תרגלת היום. כל מילה שתסמני תיספר כאן.</p></div>`;
+  if (!list.length) return `<div class="stat-card"><h3>מה עשית היום</h3><p class="muted-note">עוד לא תרגלתם היום. כל מילה שתסמנו תיספר כאן.</p></div>`;
   const cnt = (f) => list.filter(f).length;
   const end = { g: cnt(([, b]) => b === "g"), o: cnt(([, b]) => b === "o"), r: cnt(([, b]) => b === "r"), n: 0 };
   const moves = (pairs) => pairs.map(([a, b]) => [a, b, cnt(([x, y]) => x === a && y === b)]).filter((m) => m[2]);
@@ -1104,7 +1104,7 @@ function curveHTML(L) {
       ${pts.map((p, i) => (i === 0 || i === pts.length - 1 || i % every === 0) ? `<text class="ax" x="${x(i)}" y="${H - 8}" text-anchor="${i === 0 ? "start" : i === pts.length - 1 ? "end" : "middle"}">${i === 0 ? "התחלה" : i === pts.length - 1 ? "היום" : "יום " + i}</text>` : "").join("")}
     </svg>
     <div class="legend"><span><i class="dot s-g"></i>מילים שלמדת: עברו לירוק מכתום או מאדום (${last.g})</span><span><i class="dot s-o"></i>בדרך: עברו מאדום לכתום (${last.o})</span></div>
-    <p class="muted-note">מילים שסימנת בירוק כבר בפעם הראשונה (כי הכרת אותן) לא נספרות כאן. כל נקודה היא יום תרגול.</p>
+    <p class="muted-note">מילים שסימנתם בירוק כבר בפעם הראשונה (כי הכרתם אותן) לא נספרות כאן. כל נקודה היא יום תרגול.</p>
   </div>`;
 }
 /* ---------- Goals (beta) ---------- */
@@ -1136,7 +1136,7 @@ function planBoxHTML(P) {
   return `<div class="plan-box has-plan"><div><b>יש לך תוכנית לימוד: ${pl.days.length} ימים של ${pl.size} מילים</b>
       <p class="muted-note">נוצרה ב־${fmt(pl.created)}. הימים מופיעים בתפריט היחידות, תחת "תוכנית הלימוד שלי".</p>${planMsg ? `<p class="plan-msg">${planMsg}</p>` : ""}</div>
     ${planConfirm
-      ? `<div class="plan-confirm" role="alert"><span>בטוחה שאת רוצה לאפס את החלוקה? הצבעים שסימנת לא יימחקו.</span><button type="button" class="danger" id="planResetYes">כן, לאפס</button><button type="button" class="link" id="planResetNo">ביטול</button></div>`
+      ? `<div class="plan-confirm" role="alert"><span>בטוחים שאתם רוצים לאפס את החלוקה? הצבעים שסימנתם לא יימחקו.</span><button type="button" class="danger" id="planResetYes">כן, לאפס</button><button type="button" class="link" id="planResetNo">ביטול</button></div>`
       : `<div class="plan-btns"><button type="button" class="link" id="planOpen">לתרגל את יום 1</button><button type="button" class="link plan-reset" id="planReset">איפוס החלוקה</button></div>`}
   </div>`;
 }
@@ -1177,9 +1177,9 @@ function renderGoals() {
   let weekN = 0; for (let i = 0; i < 7; i++) { const x = new Date(); x.setDate(x.getDate() - i); weekN += (L[dayKey(x)] || {}).n || 0; }
   let result;
   if (!P.ok) {
-    result = `<div class="goal-result muted">${P.why === "pick" ? "בחרי תאריך מבחן, ונחשב כמה מילים צריך ללמוד ביום." :
-      P.why === "past" ? "התאריך שבחרת כבר עבר. בחרי תאריך עתידי." :
-      `נשארו ${P.daysToExam} ימים עד המבחן, פחות מימי החזרה שהגדרת. הקטיני את ימי החזרה או הגדירי יעד ידני.`}</div>`;
+    result = `<div class="goal-result muted">${P.why === "pick" ? "בחרו תאריך מבחן, ונחשב כמה מילים צריך ללמוד ביום." :
+      P.why === "past" ? "התאריך שבחרתם כבר עבר. בחרו תאריך עתידי." :
+      `נשארו ${P.daysToExam} ימים עד המבחן, פחות מימי החזרה שהגדרתם. הקטינו את ימי החזרה או הגדירו יעד ידני.`}</div>`;
   } else {
     const unitsWeek = (P.perWeek / P.unitSize);
     result = `<div class="goal-result">
@@ -1196,11 +1196,11 @@ function renderGoals() {
       <div class="gt-row"><span>היום</span><div class="gt-bar"><i style="width:${Math.min(100, (todayN / P.perDay) * 100)}%"></i></div><b>${todayN} מתוך ${P.perDay}</b></div>
       <div class="gt-row"><span>7 הימים האחרונים</span><div class="gt-bar"><i style="width:${Math.min(100, (weekN / P.perWeek) * 100)}%"></i></div><b>${weekN} מתוך ${P.perWeek}</b></div>
       ${todayN >= P.perDay ? `<p class="goal-done">🎉 עמדת ביעד של היום!</p>` : ""}
-    </div>` : `<p class="muted-note">🔒 מעקב אחרי היעד (כמה עשית היום) זמין למשתמשות רשומות. <button type="button" class="link signup-link">להרשמה</button></p>`}`;
+    </div>` : `<p class="muted-note">🔒 מעקב אחרי היעד (כמה עשיתם היום) זמין למשתמשים רשומים. <button type="button" class="link signup-link">להרשמה</button></p>`}`;
   }
   main.innerHTML = `<section class="goals">
     <div class="goals-head"><h2>יעדים</h2><span class="beta big">beta</span></div>
-    <p class="muted-note">זה כלי ניסיוני. החישוב הוא הערכה בלבד, ותלוי בהנחות שבחרת למטה.</p>
+    <p class="muted-note">זה כלי ניסיוני. החישוב הוא הערכה בלבד, ותלוי בהנחות שבחרתם למטה.</p>
     <div class="seg-tabs goal-mode" role="group" aria-label="סוג יעד">
       <button type="button" data-goal-mode="exam" aria-pressed="${G.mode === "exam"}">לפי תאריך המבחן</button>
       <button type="button" data-goal-mode="manual" aria-pressed="${G.mode === "manual"}">יעד משלי</button>
@@ -1210,8 +1210,8 @@ function renderGoals() {
         <label class="gf"><span>תאריך המבחן</span><input type="date" id="gExam" value="${G.exam}"></label>
         <label class="gf"><span>ימי תרגול בשבוע</span><select id="gPerWeek">${[3, 4, 5, 6, 7].map((n) => `<option${n === G.perWeek ? " selected" : ""}>${n}</option>`).join("")}</select></label>
         <label class="gf"><span>ימי חזרה לפני המבחן</span><select id="gReview">${[0, 3, 7, 14].map((n) => `<option value="${n}"${n === G.review ? " selected" : ""}>${n}</option>`).join("")}</select></label>
-        <label class="gf check"><input type="checkbox" id="gRed"${G.red ? " checked" : ""}><span>לכלול גם מילים אדומות (שאולי תוותרי עליהן)</span></label>
-        <p class="muted-note gf-wide">נספרות מילים חדשות ומילים בכתום ${langName}: עכשיו ${P.c.n.toLocaleString("he-IL")} חדשות ו־${P.c.o} בכתום${G.red ? ` ו־${P.c.r} באדום` : ""}. ${P.c.g.toLocaleString("he-IL")} המילים שכבר בירוק לא נספרות, כי את כבר יודעת אותן.</p>`
+        <label class="gf check"><input type="checkbox" id="gRed"${G.red ? " checked" : ""}><span>לכלול גם מילים אדומות (שאולי תוותרו עליהן)</span></label>
+        <p class="muted-note gf-wide">נספרות מילים חדשות ומילים בכתום ${langName}: עכשיו ${P.c.n.toLocaleString("he-IL")} חדשות ו־${P.c.o} בכתום${G.red ? ` ו־${P.c.r} באדום` : ""}. ${P.c.g.toLocaleString("he-IL")} המילים שכבר בירוק לא נספרות, כי אתם כבר יודעים אותן.</p>`
       : `
         <label class="gf"><span>כמה מילים</span><input type="number" id="gManual" min="1" max="1000" value="${G.manual}"></label>
         <label class="gf"><span>ב־</span><select id="gManualPer"><option value="day"${G.manualPer === "day" ? " selected" : ""}>יום</option><option value="week"${G.manualPer === "week" ? " selected" : ""}>שבוע</option></select></label>
@@ -1227,7 +1227,7 @@ function renderStats() {
   if (!Stats.enabled()) {
     main.innerHTML = `<section class="stats"><div class="stats-lock">
       <h2>🔒 ההתקדמות שלי</h2>
-      <p>מעקב ההתקדמות זמין למשתמשות רשומות: מה עשית היום, כמה מילים עלו בצבע מאז שהתחלת, וההתקדמות בכל יחידה.</p>
+      <p>מעקב ההתקדמות זמין למשתמשים רשומים: מה עשיתם היום, כמה מילים עלו בצבע מאז שהתחלתם, וההתקדמות בכל יחידה.</p>
       <button type="button" class="primary signup-link">להרשמה או התחברות</button></div></section>`;
     return;
   }
@@ -1254,7 +1254,7 @@ function renderStats() {
       <div class="stat-head"><h3>כל המילים ${langName}</h3><span class="big-pct">${pct}% <small>בירוק</small></span></div>
       ${stackBar(c, tot)}
       <div class="legend"><span><i class="dot s-g"></i>${c.g} ירוק</span><span><i class="dot s-o"></i>${c.o} כתום</span><span><i class="dot s-r"></i>${c.r} אדום</span><span><i class="dot s-n"></i>${c.n} חדשות</span></div>
-      <p class="milestone">${next ? `🎯 עוד <b>${next - c.g}</b> מילים בירוק ותגיעי ל־${next}` : "🏆 עברת את כל אבני הדרך!"}</p>
+      <p class="milestone">${next ? `🎯 עוד <b>${next - c.g}</b> מילים בירוק ותגיעו ל־${next}` : "🏆 עברתם את כל אבני הדרך!"}</p>
     </div>
     <details class="stat-card units-card">
       <summary><h3>לפי יחידה</h3><span class="muted-note">הצגה</span></summary>
@@ -1267,7 +1267,7 @@ function renderStats() {
 function renderHow() {
   $("main").innerHTML = `
   <section class="how" aria-labelledby="how-title">
-    <span class="how-pill">נבנה בשביל מי שמתכוננת לפסיכומטרי</span>
+    <span class="how-pill">נבנה בשביל מי שמתכונן לפסיכומטרי</span>
     <h2 id="how-title">כל מילה מקבלת צבע, ולומדים רק את מה שצריך.</h2>
     <p class="how-lead">עוברים פעם אחת על כל המילים ביחידה וממיינים אותן לשלוש ערימות. מילים שכבר מכירים יוצאות מהדרך, וכל השאר מחכות בצבע שנבחר. ככה הזמן הולך על המילים שבאמת צריך ללמוד.</p>
     <ol class="how-steps">
@@ -1293,12 +1293,12 @@ function renderHow() {
       <li class="how-card">
         <span class="how-num">4</span>
         <h3>עוקבים אחרי ההתקדמות</h3>
-        <p>בלשונית "ההתקדמות שלי" רואים מה תורגל היום, כמה מילים עלו בצבע מאז ההתחלה ואיפה עומדים בכל יחידה. למשתמשות רשומות.</p>
+        <p>בלשונית "ההתקדמות שלי" רואים מה תורגל היום, כמה מילים עלו בצבע מאז ההתחלה ואיפה עומדים בכל יחידה. למשתמשים רשומים.</p>
       </li>
     </ol>
     <div class="how-also">
-      <p><b>אסוציאציות.</b> כותבים לכל מילה טריק שעוזר לזכור, ורואים את הטריקים של משתמשות אחרות (למשתמשות רשומות). ♥ למה שעובד, ⭐ למועדפים.</p>
-      <p><b>פתחי משתמש.</b> הירשמי בחינם כדי לסנכרן את ההתקדמות בין הטלפון למחשב, לראות את האסוציאציות של אחרות ולשתף את שלך.${document.getElementById("acctBtn") ? ` <button type="button" class="link signup-link">להרשמה</button>` : ""}</p>
+      <p><b>אסוציאציות.</b> כותבים לכל מילה טריק שעוזר לזכור, ורואים את הטריקים של משתמשים אחרים (למשתמשים רשומים). ♥ למה שעובד, ⭐ למועדפים.</p>
+      <p><b>פתחו משתמש.</b> הירשמו בחינם כדי לסנכרן את ההתקדמות בין הטלפון למחשב, לראות את האסוציאציות של אחרים ולשתף את שלכם.${document.getElementById("acctBtn") ? ` <button type="button" class="link signup-link">להרשמה</button>` : ""}</p>
       <p class="how-keys"><b>קיצורי מקלדת במחשב.</b> <kbd>1</kbd> ירוק · <kbd>2</kbd> כתום · <kbd>3</kbd> אדום · <kbd>רווח</kbd> הצגת הפירוש או הסתרתו · <kbd>←</kbd> <kbd>→</kbd> מעבר בין מילים · <kbd>Ctrl+Z</kbd> ביטול הסימונים האחרונים, צעד אחר צעד · <kbd>S</kbd> השמעת המילה</p>
     </div>
     <button type="button" class="primary how-start" data-view="practice">להתחיל לתרגל</button>
@@ -1364,7 +1364,7 @@ document.addEventListener("click", (e) => {
     t.disabled = true;
     Assoc.remove(w, t.dataset.note).then((ok) => {
       if (ok) refreshAssoc(w);
-      else { t.disabled = false; t.closest(".assoc").querySelector(".assoc-msg").textContent = "המחיקה לא הצליחה. נסי שוב."; }
+      else { t.disabled = false; t.closest(".assoc").querySelector(".assoc-msg").textContent = "המחיקה לא הצליחה. נסו שוב."; }
     });
     return;
   }
@@ -1381,7 +1381,7 @@ document.addEventListener("click", (e) => {
       if (ok === true) refreshAssoc(w);
       else {
         t.disabled = false;
-        box.querySelector(".assoc-msg").textContent = ok === "signin" ? "צריך להתחבר כדי לעשות לייק." : "הלייק לא נשמר. בדקי את החיבור לאינטרנט ונסי שוב.";
+        box.querySelector(".assoc-msg").textContent = ok === "signin" ? "צריך להתחבר כדי לעשות לייק." : "הלייק לא נשמר. בדקו את החיבור לאינטרנט ונסו שוב.";
       }
     });
     return;
@@ -1403,14 +1403,14 @@ document.addEventListener("click", (e) => {
     t.disabled = true;
     Assoc.act(w, t.dataset.note, t.dataset.act).then((ok) => {
       if (ok) refreshAssoc(w);
-      else { t.disabled = false; t.closest(".assoc").querySelector(".assoc-msg").textContent = "השינוי לא הצליח. בדקי את החיבור לאינטרנט ונסי שוב."; }
+      else { t.disabled = false; t.closest(".assoc").querySelector(".assoc-msg").textContent = "השינוי לא הצליח. בדקו את החיבור לאינטרנט ונסו שוב."; }
     });
     return;
   }
   if (t.dataset.set) { const x = rowOf(t); if (!x) return; if (statusOf(x.w) !== t.dataset.set) logRate(statusOf(x.w), t.dataset.set, 1, ui.lang, x.w); setEntry(x.w, { s: t.dataset.set }); updateRow(t.closest(".row")); renderHeader(); return; }
   if (t.dataset.del) {
     const w = t.dataset.del;
-    if (pendingDelete !== w) { pendingDelete = w; t.textContent = "לחצי שוב כדי למחוק"; return; }
+    if (pendingDelete !== w) { pendingDelete = w; t.textContent = "ללחוץ שוב כדי למחוק"; return; }
     state.c[ui.lang] = state.c[ui.lang].filter((x) => x.w !== w); delete state.p[ui.lang][w]; pendingDelete = null;
     save(ui.lang); render(); return;
   }
@@ -1441,7 +1441,7 @@ async function submitAssoc(form) {
   btn.disabled = true;
   const ok = await Assoc.add(w, text.slice(0, 500), img);
   btn.disabled = false;
-  if (!ok) { box.querySelector(".assoc-msg").textContent = "השמירה לא הצליחה. בדקי את החיבור לאינטרנט ונסי שוב."; return; }
+  if (!ok) { box.querySelector(".assoc-msg").textContent = "השמירה לא הצליחה. בדקו את החיבור לאינטרנט ונסו שוב."; return; }
   ta.value = ""; form._img = "";
   refreshAssoc(w);
 }
@@ -1477,7 +1477,7 @@ async function attachImage(form, file) {
     pv.innerHTML = `<img src="${form._img}" alt="התמונה שנבחרה"><button type="button" class="img-remove">הסרת התמונה</button>`;
     pv.hidden = false;
   } catch (err) {
-    msg.textContent = err.message === "type" ? "אפשר להוסיף רק קובץ תמונה." : "לא הצלחנו לקרוא את התמונה. נסי תמונה אחרת.";
+    msg.textContent = err.message === "type" ? "אפשר להוסיף רק קובץ תמונה." : "לא הצלחנו לקרוא את התמונה. נסו תמונה אחרת.";
   }
 }
 document.addEventListener("click", (e) => {
@@ -1543,7 +1543,7 @@ let fb = null, account = null, unsubs = [];
 const wTimers = {}, wBusy = {}, wDirty = {};
 const LANGS = ["en", "he"];
 function setSync(t) { $("syncText").textContent = t; }
-function localSyncText() { setSync(account ? `ההתקדמות נשמרת במשתמשת ${account.name}` : "ההתקדמות נשמרת בדפדפן הזה"); }
+function localSyncText() { setSync(account ? `ההתקדמות נשמרת במשתמש ${account.name}` : "ההתקדמות נשמרת בדפדפן הזה"); }
 function save(lang) { lsSet(LS_STATE, state); if (account) (lang ? [lang] : LANGS).forEach(queueWrite); }
 function queueWrite(lang) { clearTimeout(wTimers[lang]); wTimers[lang] = setTimeout(() => writeLang(lang), 800); }
 async function writeLang(lang) {
@@ -1554,7 +1554,7 @@ async function writeLang(lang) {
   try {
     await fb.setDoc(fb.doc(fb.db, "users", account.uid, "progress", lang), { p: state.p[lang], c: state.c[lang], l: (state.l || {})[lang] || {}, g: ui.goals || null, pl: typeof planOut === "function" ? planOut((ui.plans || {})[lang]) : null, t: Date.now() });
     localSyncText();
-  } catch (e) { setSync("השמירה במשתמשת לא הצליחה כרגע. ההתקדמות שמורה בדפדפן ותישלח שוב בשינוי הבא."); }
+  } catch (e) { setSync("השמירה במשתמש לא הצליחה כרגע. ההתקדמות שמורה בדפדפן ותישלח שוב בשינוי הבא."); }
   wBusy[lang] = false;
   if (wDirty[lang]) { wDirty[lang] = false; writeLang(lang); }
 }
@@ -1581,16 +1581,16 @@ function userName(email) {
   return local;
 }
 const AUTH_ERRORS = {
-  "auth/email-already-in-use": "שם המשתמשת הזה כבר תפוס. אפשר לבחור שם אחר, או ללחוץ \"כניסה\" אם זו המשתמשת שלך.",
-  "auth/invalid-credential": "שם המשתמשת או הסיסמה לא נכונים.",
-  "auth/invalid-login-credentials": "שם המשתמשת או הסיסמה לא נכונים.",
-  "auth/wrong-password": "שם המשתמשת או הסיסמה לא נכונים.",
-  "auth/user-not-found": "אין משתמשת בשם הזה. אפשר ליצור אותה עם \"יצירת משתמשת חדשה\".",
+  "auth/email-already-in-use": "שם המשתמש הזה כבר תפוס. אפשר לבחור שם אחר, או ללחוץ \"כניסה\" אם זה המשתמש שלך.",
+  "auth/invalid-credential": "שם המשתמש או הסיסמה לא נכונים.",
+  "auth/invalid-login-credentials": "שם המשתמש או הסיסמה לא נכונים.",
+  "auth/wrong-password": "שם המשתמש או הסיסמה לא נכונים.",
+  "auth/user-not-found": "אין משתמש בשם הזה. אפשר ליצור אותו עם \"יצירת משתמש חדש\".",
   "auth/weak-password": "הסיסמה צריכה להיות לפחות 6 תווים.",
   "auth/missing-password": "צריך להקליד סיסמה.",
-  "auth/too-many-requests": "היו יותר מדי ניסיונות. נסי שוב בעוד כמה דקות.",
-  "auth/network-request-failed": "אין חיבור לאינטרנט. בדקי את החיבור ונסי שוב.",
-  "auth/invalid-email": "שם המשתמשת יכול להכיל אותיות, מספרים, נקודה, מקף וקו תחתון."
+  "auth/too-many-requests": "היו יותר מדי ניסיונות. נסו שוב בעוד כמה דקות.",
+  "auth/network-request-failed": "אין חיבור לאינטרנט. בדקו את החיבור ונסו שוב.",
+  "auth/invalid-email": "שם המשתמש יכול להכיל אותיות, מספרים, נקודה, מקף וקו תחתון."
 };
 
 async function loadFirebase() {
@@ -1644,9 +1644,9 @@ async function startAccounts() {
     unsubs.forEach((f) => f()); unsubs = [];
     if (!u) { account = null; renderAccount(); localSyncText(); return; }
     const viaPassword = (u.email || "").endsWith("@ramzor-milim.app");
-    account = { uid: u.uid, name: viaPassword ? userName(u.email) : (u.displayName || u.email || "משתמשת Google") };
-    account.shareName = (viaPassword ? account.name : (u.displayName || "").split(" ")[0]) || "משתמשת";
-    renderAccount(); setSync("מסנכרן עם המשתמשת…");
+    account = { uid: u.uid, name: viaPassword ? userName(u.email) : (u.displayName || u.email || "משתמש Google") };
+    account.shareName = (viaPassword ? account.name : (u.displayName || "").split(" ")[0]) || "משתמש";
+    renderAccount(); setSync("מסנכרן עם המשתמש…");
     fb.setDoc(fb.doc(fb.db, "members", u.uid), { t: Date.now() }).then(loadCounts).catch(() => {});
     try {
       for (const lang of LANGS) {
@@ -1668,7 +1668,7 @@ async function startAccounts() {
         }, () => {}));
       }
       localSyncText();
-    } catch (e) { setSync("לא הצלחנו לטעון את ההתקדמות מהמשתמשת. בדקי את החיבור ורענני את הדף."); }
+    } catch (e) { setSync("לא הצלחנו לטעון את ההתקדמות מהמשתמש. בדקו את החיבור ורעננו את הדף."); }
   });
 }
 
@@ -1685,10 +1685,10 @@ document.addEventListener("click", async (e) => {
       const homeScreen = window.navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
       if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") gErr.textContent = "";
       else if (code === "auth/popup-blocked" || homeScreen) gErr.textContent = homeScreen
-        ? "באפליקציה שעל מסך הבית אייפון לא תמיד מאפשר כניסה עם Google. אפשר להשתמש כאן בשם משתמשת וסיסמה, או לפתוח את האתר בספארי."
-        : "הדפדפן חסם את חלון הכניסה. אפשרי חלונות קופצים לאתר הזה ונסי שוב.";
+        ? "באפליקציה שעל מסך הבית אייפון לא תמיד מאפשר כניסה עם Google. אפשר להשתמש כאן בשם משתמש וסיסמה, או לפתוח את האתר בספארי."
+        : "הדפדפן חסם את חלון הכניסה. אפשרו חלונות קופצים לאתר הזה ונסו שוב.";
       else if (code === "auth/unauthorized-domain" || code === "auth/operation-not-allowed") gErr.textContent = "הכניסה עם Google עדיין לא הופעלה באתר הזה.";
-      else gErr.textContent = AUTH_ERRORS[code] || "הכניסה עם Google לא הצליחה. נסי שוב.";
+      else gErr.textContent = AUTH_ERRORS[code] || "הכניסה עם Google לא הצליחה. נסו שוב.";
     }
     btn.disabled = false;
   }
@@ -1700,10 +1700,10 @@ document.addEventListener("submit", async (e) => {
   const mode = e.submitter && e.submitter.value === "signup" ? "signup" : "login";
   const name = $("acctUser").value.trim(), pass = $("acctPass").value;
   const err = $("acctErr");
-  if (name.length < 2) { err.textContent = "שם המשתמשת צריך להיות לפחות 2 תווים."; return; }
-  if (/[\s@]/.test(name)) { err.textContent = "שם המשתמשת לא יכול להכיל רווחים או @."; return; }
+  if (name.length < 2) { err.textContent = "שם המשתמש צריך להיות לפחות 2 תווים."; return; }
+  if (/[\s@]/.test(name)) { err.textContent = "שם המשתמש לא יכול להכיל רווחים או @."; return; }
   const email = userEmail(name);
-  if (!email) { err.textContent = "שם המשתמשת ארוך מדי."; return; }
+  if (!email) { err.textContent = "שם המשתמש ארוך מדי."; return; }
   if (pass.length < 6) { err.textContent = "הסיסמה צריכה להיות לפחות 6 תווים."; return; }
   err.textContent = "";
   $("loginBtn").disabled = $("signupBtn").disabled = true;
@@ -1713,7 +1713,7 @@ document.addEventListener("submit", async (e) => {
     $("acctPass").value = "";
     $("acctDlg").close();
   } catch (ex) {
-    err.textContent = AUTH_ERRORS[ex && ex.code] || "משהו השתבש. נסי שוב בעוד רגע.";
+    err.textContent = AUTH_ERRORS[ex && ex.code] || "משהו השתבש. נסו שוב בעוד רגע.";
   }
   $("loginBtn").disabled = $("signupBtn").disabled = false;
 });
@@ -1754,7 +1754,7 @@ if (FIREBASE_CONFIG) {
       return {
         id: n.id, text: n.text, img: n.img || "", vis: anon ? "anon" : "named", likeCount: (n.likes || []).length,
         badge: anon ? "גלוי לכולם, בלי שם" : `גלוי לכולם בשם ${n.name}`,
-        actions: [anon ? { key: "named", label: "להציג את שמי" } : { key: "anon", label: "להפוך לאנונימית" }, { key: "hide", label: "להסתיר מכולם" }]
+        actions: [anon ? { key: "named", label: "להציג את שמי" } : { key: "anon", label: "להפוך לאנונימי" }, { key: "hide", label: "להסתיר מכולם" }]
       };
     });
     const priv = (entry(w).pa || []).map((x, i) => ({
@@ -1813,7 +1813,7 @@ if (FIREBASE_CONFIG) {
   };
   Assoc.note = () => account
     ? `אסוציאציה חדשה גלויה לכולם בשם ${esc(account.shareName)}. לכל אסוציאציה אפשר לבחור להפוך לאנונימית או להסתיר מכולם.`
-    : "בלי משתמשת, האסוציאציות שלך נשמרות רק בדפדפן הזה. התחברי כדי לשמור אותן במשתמשת ולשתף עם אחרות.";
+    : "בלי משתמש, האסוציאציות שלך נשמרות רק בדפדפן הזה. התחברו כדי לשמור אותן במשתמש ולשתף עם אחרים.";
   Assoc.canImage = () => !!account;
   Assoc.othersLocked = () => !account;
   if (typeof Stats !== "undefined") Stats.enabled = () => !!account;   // progress tracking for signed-in users only
