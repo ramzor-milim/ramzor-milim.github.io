@@ -104,6 +104,10 @@ kbd { font-family: var(--body); font-size: .72rem; border: 1px solid var(--line)
 .star[aria-pressed="true"] { color: var(--orange); }
 .note-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: start; }
 .notes .hidden-item { opacity: .6; }
+.head-actions { display: inline-flex; align-items: center; gap: 6px; }
+.like { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 1px 9px; font-size: .8rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.like[aria-pressed="true"] { color: var(--red); border-color: var(--red); background: var(--red-soft); }
+.likes-own { font-size: .8rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
 .note-meta button.hide-note { color: var(--muted); }
 .show-hidden { justify-self: start; font-size: .82rem; }
 .notes .fav-item { border-color: var(--orange); background: var(--orange-soft); }
@@ -354,6 +358,7 @@ const Assoc = {
   add: async (w, text) => { setEntry(w, { a: (entry(w).a || []).concat(text) }); return true; },
   remove: async (w, id) => { const a = (entry(w).a || []).slice(); a.splice(Number(id), 1); setEntry(w, { a }); return true; },
   act: async () => false,       // visibility changes (public build only)
+  like: async () => false,      // toggle a like (public build only); returns true, false, or "signin"
   others: () => null,           // [{text, name}], or null when sharing isn't available
   note: () => "",
   prefetch: () => {}
@@ -378,14 +383,21 @@ function noteHTML(n, kind, i, starred) {
   const star = `<button type="button" class="star" data-fav="${esc(favKey(n))}" aria-pressed="${starred}" aria-label="${starred ? "הסרה מהמועדפים" : "שמירה למועדפים"}" title="${starred ? "הסרה מהמועדפים" : "שמירה למועדפים"}">${starred ? "★" : "☆"}</button>`;
   const meta = kind === "mine"
     ? `<span class="vis" data-v="${n.vis || ""}">${esc(n.badge || "")}</span><span class="note-actions">${(n.actions || []).map((a) => `<button type="button" class="act-note" data-act="${a.key}" data-note="${esc(n.id)}">${a.label}</button>`).join("")}<button type="button" class="del-note" data-note="${esc(n.id)}">מחיקה</button></span>`
-    : `<span>${esc(n.name || "אנונימי")}</span><span class="note-actions"><button type="button" class="copy-note" data-i="${i}">להעתיק אליי</button>${kind === "hidden"
+    : `<span>${esc(n.name || "אנונימי")}</span><span class="note-actions">${kind === "hidden"
         ? `<button type="button" class="unhide-note" data-key="${esc(favKey(n))}">ביטול הסתרה</button>`
         : `<button type="button" class="hide-note" data-key="${esc(favKey(n))}">הסתרה</button>`}</span>`;
-  return `<li class="${kind === "mine" ? "mine-item" : ""}${kind === "hidden" ? "hidden-item" : ""}${starred ? " fav-item" : ""}"><span class="note-head"><span class="note-text">${esc(n.text)}</span>${kind === "hidden" ? "" : star}</span>
+  const likes = n.likeCount === undefined || kind === "hidden" ? ""
+    : kind === "mine"
+      ? `<span class="likes-own" title="לייקים">♥ ${n.likeCount}</span>`
+      : `<button type="button" class="like" data-like="${esc(n.id)}" aria-pressed="${!!n.liked}" aria-label="${n.liked ? "ביטול לייק" : "לייק"}" title="${n.liked ? "ביטול לייק" : "לייק"}">${n.liked ? "♥" : "♡"} ${n.likeCount}</button>`;
+  return `<li class="${kind === "mine" ? "mine-item" : ""}${kind === "hidden" ? "hidden-item" : ""}${starred ? " fav-item" : ""}"><span class="note-head"><span class="note-text">${esc(n.text)}</span><span class="head-actions">${likes}${kind === "hidden" ? "" : star}</span></span>
     <span class="note-meta">${meta}</span></li>`;
 }
 function assocHTML(w) {
-  const mine = Assoc.mine(w), others = Assoc.others(w), note = Assoc.note(), favs = favsOf(w);
+  const byLikes = (a, b) => (b.likeCount || 0) - (a.likeCount || 0);
+  const mine = Assoc.mine(w).slice().sort(byLikes), note = Assoc.note(), favs = favsOf(w);
+  const othersRaw = Assoc.others(w);
+  const others = othersRaw === null ? null : othersRaw.slice().sort(byLikes);
   const isFav = (n) => favs.has(favKey(n));
   const hidden = hiddenOf(w);
   const isHidden = (n) => hidden.has(favKey(n));
@@ -614,6 +626,18 @@ document.addEventListener("click", (e) => {
     refreshAssoc(w);
     return;
   }
+  if (t.classList.contains("like")) {
+    const box = t.closest(".assoc"), w = box.dataset.w;
+    t.disabled = true;
+    Assoc.like(w, t.dataset.like).then((ok) => {
+      if (ok === true) refreshAssoc(w);
+      else {
+        t.disabled = false;
+        box.querySelector(".assoc-msg").textContent = ok === "signin" ? "צריך להתחבר כדי לעשות לייק." : "הלייק לא נשמר. בדקו את החיבור לאינטרנט ונסו שוב.";
+      }
+    });
+    return;
+  }
   if (t.classList.contains("hide-note") || t.classList.contains("unhide-note")) {
     const w = t.closest(".assoc").dataset.w;
     setHidden(w, t.dataset.key, t.classList.contains("hide-note"));
@@ -633,11 +657,6 @@ document.addEventListener("click", (e) => {
       if (ok) refreshAssoc(w);
       else { t.disabled = false; t.closest(".assoc").querySelector(".assoc-msg").textContent = "השינוי לא הצליח. בדקו את החיבור לאינטרנט ונסו שוב."; }
     });
-    return;
-  }
-  if (t.classList.contains("copy-note")) {
-    const box = t.closest(".assoc"), n = (Assoc.others(box.dataset.w) || [])[Number(t.dataset.i)];
-    if (n) { const ta = box.querySelector(".composer textarea"); ta.value = n.text; ta.focus(); }
     return;
   }
   if (t.dataset.set) { const x = rowOf(t); if (!x) return; setEntry(x.w, { s: t.dataset.set }); updateRow(t.closest(".row")); renderHeader(); return; }
@@ -766,7 +785,8 @@ async function loadFirebase() {
     signOut: authM.signOut, onAuth: authM.onAuthStateChanged,
     googlePopup: () => authM.signInWithPopup(fb.auth, new authM.GoogleAuthProvider()),
     doc: fsM.doc, getDoc: fsM.getDoc, setDoc: fsM.setDoc, onSnapshot: fsM.onSnapshot,
-    collection: fsM.collection, getDocs: fsM.getDocs, query: fsM.query, orderBy: fsM.orderBy, limit: fsM.limit, deleteDoc: fsM.deleteDoc
+    collection: fsM.collection, getDocs: fsM.getDocs, query: fsM.query, orderBy: fsM.orderBy, limit: fsM.limit, deleteDoc: fsM.deleteDoc,
+    updateDoc: fsM.updateDoc, arrayUnion: fsM.arrayUnion, arrayRemove: fsM.arrayRemove
   };
   return fb;
 }
@@ -894,7 +914,7 @@ if (FIREBASE_CONFIG) {
     const shared = (notesCache[ck(w)] || []).filter((n) => n.uid === account.uid).map((n) => {
       const anon = !n.name;
       return {
-        id: n.id, text: n.text, vis: anon ? "anon" : "named",
+        id: n.id, text: n.text, vis: anon ? "anon" : "named", likeCount: (n.likes || []).length,
         badge: anon ? "גלוי לכולם, בלי שם" : `גלוי לכולם בשם ${n.name}`,
         actions: [anon ? { key: "named", label: "להציג את שמי" } : { key: "anon", label: "להפוך לאנונימי" }, { key: "hide", label: "להסתיר מכולם" }]
       };
@@ -928,17 +948,28 @@ if (FIREBASE_CONFIG) {
         return true;
       }
       if (act === "anon" || act === "named") {
-        const ref = fb.doc(col());
-        const n = { uid: account.uid, text: old.text, name: act === "anon" ? "" : account.shareName.slice(0, 40), t: old.t || Date.now() };
-        await fb.setDoc(ref, n);
-        await fb.deleteDoc(fb.doc(col(), id));
-        notesCache[k] = notesCache[k].map((x) => (x.id === id ? { id: ref.id, ...n } : x));
+        const name = act === "anon" ? "" : account.shareName.slice(0, 40);
+        await fb.updateDoc(fb.doc(col(), id), { name });
+        old.name = name;
         return true;
       }
     } catch (e) {}
     return false;
   };
-  Assoc.others = (w) => (notesCache[ck(w)] || []).filter((n) => !account || n.uid !== account.uid);
+  Assoc.others = (w) => (notesCache[ck(w)] || []).filter((n) => !account || n.uid !== account.uid)
+    .map((n) => ({ ...n, likeCount: (n.likes || []).length, liked: !!account && (n.likes || []).includes(account.uid) }));
+  Assoc.like = async (w, id) => {
+    if (!account) return "signin";
+    const k = ck(w), n = (notesCache[k] || []).find((x) => x.id === id);
+    if (!n || n.uid === account.uid) return false;
+    const liked = (n.likes || []).includes(account.uid);
+    try {
+      await loadFirebase();
+      await fb.updateDoc(fb.doc(notesCol(ui.lang, w), id), { likes: liked ? fb.arrayRemove(account.uid) : fb.arrayUnion(account.uid) });
+      n.likes = liked ? (n.likes || []).filter((u) => u !== account.uid) : (n.likes || []).concat(account.uid);
+      return true;
+    } catch (e) { return false; }
+  };
   Assoc.note = () => account
     ? `אסוציאציה חדשה גלויה לכולם בשם ${esc(account.shareName)}. לכל אסוציאציה אפשר לבחור להפוך לאנונימית או להסתיר מכולם.`
     : "בלי משתמש, האסוציאציות שלך נשמרות רק בדפדפן הזה. התחברו כדי לשמור אותן במשתמש ולשתף עם אחרים.";
