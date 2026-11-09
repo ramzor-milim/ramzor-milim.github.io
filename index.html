@@ -99,6 +99,12 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 .card-top { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; gap: 8px; }
 .badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
 .word { font-family: var(--display); font-size: clamp(2.1rem, 9vw, 3rem); font-weight: 700; text-align: center; line-height: 1.25; padding-block: 18px 6px; overflow-wrap: anywhere; text-wrap: balance; }
+.word-row { display: flex; align-items: center; justify-content: center; gap: 10px; padding-block: 18px 6px; }
+.word-row .word { padding-block: 0; }
+.speak { border: 1px solid var(--line); background: var(--surface); border-radius: 50%; width: 42px; height: 42px; flex: none; font-size: 1.1rem; display: grid; place-items: center; }
+.speak:hover { background: var(--bg); }
+.speak.on { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+.speak.small { width: 26px; height: 26px; font-size: .75rem; margin-inline-start: 6px; vertical-align: middle; display: inline-grid; }
 .word.long { font-size: clamp(1.5rem, 6vw, 2.1rem); }
 .reveal { display: grid; justify-items: center; gap: 8px; min-height: 92px; align-content: center; }
 .btn-reveal { border: 1.5px dashed var(--line); background: var(--bg); border-radius: 12px; padding: 12px 22px; font-weight: 600; color: var(--ink); width: 100%; }
@@ -585,6 +591,34 @@ function setEntry(w, patch, lang = ui.lang) {
 }
 const dirOf = () => (ui.lang === "en" ? "ltr" : "rtl");
 
+/* 🔊 pronunciation with the browser's built-in voices */
+const TTS = "speechSynthesis" in window ? window.speechSynthesis : null;
+function voiceFor(lang) {
+  if (!TTS) return null;
+  const vs = TTS.getVoices();
+  const want = lang === "en" ? ["en-us", "en-gb", "en"] : ["he", "iw"];
+  const ok = vs.filter((v) => want.some((w) => v.lang.toLowerCase().replace("_", "-").startsWith(w)));
+  if (!ok.length) return null;
+  const score = (v) => (/natural|neural|google|samantha|ava|aria|jenny|carmit|asaf/i.test(v.name) ? 2 : 0) + (v.localService ? 0 : 1) + (v.lang.toLowerCase().startsWith(want[0]) ? 1 : 0);
+  return ok.sort((a, b) => score(b) - score(a))[0];
+}
+function canSpeak(lang = ui.lang) {
+  if (!TTS) return false;
+  if (lang === "en") return true;              // English is available everywhere; voices may load a moment later
+  return !!voiceFor("he");                      // Hebrew only when the device has a Hebrew voice
+}
+function speakWord(w, lang = ui.lang) {
+  if (!TTS || !w) return;
+  const text = String(w).replace(/\s*\/\s*/g, ", ").replace(/[()]/g, " ").replace(/…/g, " ");
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang === "en" ? "en-US" : "he-IL";
+  const v = voiceFor(lang); if (v) u.voice = v;
+  u.rate = 0.85;
+  TTS.cancel(); TTS.speak(u);
+}
+const speakBtn = (w, small) => canSpeak() ? `<button type="button" class="speak${small ? " small" : ""}" data-speak="${esc(w)}" aria-label="השמעת המילה" title="השמעה${small ? "" : " (S)"}">🔊</button>` : "";
+if (TTS) TTS.addEventListener?.("voiceschanged", () => { if (DICT && ui.lang === "he") { if (ui.view === "practice") renderPractice(); else if (ui.view === "list") renderListRows(); } });
+
 /* Associations: a list per word. Local by default; the public build swaps in shared storage. */
 const Assoc = {
   mine: (w) => localMine(w),
@@ -815,7 +849,7 @@ function renderPractice() {
     <div class="card" data-s="${s}">
       <div class="card-top"><span>${pos + 1} / ${queue.length}${item.u ? ` · יחידה ${item.u}` : " · מילה שלי"}</span>
         <span class="badge"><span class="dot s-${s}"></span>${s === "n" ? "מילה חדשה" : STATUS[s]}</span></div>
-      <div class="word${w.length > 16 ? " long" : ""}" dir="${dirOf()}" lang="${ui.lang}">${esc(w)}</div>
+      <div class="word-row"><div class="word${w.length > 16 ? " long" : ""}" dir="${dirOf()}" lang="${ui.lang}">${esc(w)}</div>${speakBtn(w)}</div>
       <div class="reveal">
         ${revealed ? `<div class="meaning">${meaningHTML(item.m)}</div>
              <button type="button" class="link small-link" id="hideMeaningBtn">הסתרת הפירוש</button>`
@@ -910,7 +944,7 @@ function rowHTML(x, i) {
   const s = statusOf(x.w), a = hasMine(x.w);
   return `<details class="row" data-i="${i}">
     <summary><span class="dot s-${s}"></span>
-      <span style="min-width:0"><span class="w" dir="${dirOf()}">${esc(x.w)}</span><span class="m">${esc(x.m)}</span></span>
+      <span style="min-width:0"><span class="w" dir="${dirOf()}">${esc(x.w)}</span>${speakBtn(x.w, true)}<span class="m">${esc(x.m)}</span></span>
       <span class="${a ? "has-a" : ""}">${a ? "יש אסוציאציה" : ""}</span></summary></details>`;
 }
 function rowBodyHTML(x) {
@@ -1221,7 +1255,7 @@ function renderHow() {
     <div class="how-also">
       <p><b>אסוציאציות.</b> כותבת לכל מילה טריק שעוזר לזכור, ורואה את הטריקים של משתמשות אחרות (למשתמשות רשומות). ♥ למה שעובד, ⭐ למועדפים.</p>
       <p><b>משתמשת.</b> הירשמי בחינם כדי לסנכרן את ההתקדמות בין הטלפון למחשב, לראות את האסוציאציות של אחרות ולשתף את שלך.${document.getElementById("acctBtn") ? ` <button type="button" class="link signup-link">להרשמה</button>` : ""}</p>
-      <p class="how-keys"><b>קיצורי מקלדת במחשב.</b> <kbd>1</kbd> ירוק · <kbd>2</kbd> כתום · <kbd>3</kbd> אדום · <kbd>רווח</kbd> הצגת הפירוש או הסתרתו · <kbd>←</kbd> <kbd>→</kbd> מעבר בין מילים · <kbd>Ctrl+Z</kbd> ביטול הסימונים האחרונים, צעד אחר צעד</p>
+      <p class="how-keys"><b>קיצורי מקלדת במחשב.</b> <kbd>1</kbd> ירוק · <kbd>2</kbd> כתום · <kbd>3</kbd> אדום · <kbd>רווח</kbd> הצגת הפירוש או הסתרתו · <kbd>←</kbd> <kbd>→</kbd> מעבר בין מילים · <kbd>Ctrl+Z</kbd> ביטול הסימונים האחרונים, צעד אחר צעד · <kbd>S</kbd> השמעת המילה</p>
     </div>
     <button type="button" class="primary how-start" data-view="practice">להתחיל לתרגל</button>
   </section>`;
@@ -1231,6 +1265,8 @@ function resetView() { for (const k in cache) delete cache[k]; listShown = PAGE;
 
 /* ---------- Events ---------- */
 document.addEventListener("click", (e) => {
+  const sp = e.target.closest && e.target.closest("[data-speak]");
+  if (sp) { e.preventDefault(); e.stopPropagation(); speakWord(sp.dataset.speak); sp.classList.add("on"); setTimeout(() => sp.classList.remove("on"), 600); return; }
   const pick = document.getElementById("unitPick");
   if (pick && pick.open && !e.target.closest("#unitPick")) pick.open = false;
   if (e.target.closest("#homeLink")) {
@@ -1433,6 +1469,7 @@ document.addEventListener("keydown", (e) => {
   }
   if (!DICT || ui.view !== "practice" || e.target.closest("textarea, input, select") || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key === " " || e.key === "Enter") { if (e.target.closest("button")) return; e.preventDefault(); if (pos < queue.length) { revealed = !revealed; if (!revealed) hint = false; renderPractice(); } }
+  else if ((e.key === "s" || e.key === "S" || e.key === "ד") && pos < queue.length) speakWord(queue[pos].w);
   else if (e.key === "1") rate("g"); else if (e.key === "2") rate("o"); else if (e.key === "3") rate("r");
   else if (e.key === "ArrowLeft") { if (pos < queue.length) { pos++; revealed = false; hint = false; renderPractice(); } }
   else if (e.key === "ArrowRight") { if (pos > 0) { pos--; revealed = false; hint = false; renderPractice(); } }
