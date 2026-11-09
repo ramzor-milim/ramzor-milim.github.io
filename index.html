@@ -70,6 +70,18 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 .unit-opt small { margin-inline-start: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
 .unit-hint { margin: 0; font-size: .82rem; color: var(--accent); font-weight: 600; }
 .unit-actions { display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 6px; }
+.gsearch { position: relative; }
+.gsearch input { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; background: var(--surface); font-size: .95rem; }
+.gres { position: absolute; top: calc(100% + 6px); inset-inline: 0; z-index: 30; background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 14px 34px rgb(0 0 0 / .16); max-height: min(70vh, 560px); overflow-y: auto; padding: 6px; display: grid; gap: 4px; }
+.gr { padding: 8px 10px; border-radius: 10px; display: grid; gap: 4px; }
+.gr + .gr { border-top: 1px solid var(--line); border-radius: 0; }
+.gr-main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.gr-main b { font-family: var(--display); font-size: 1.1rem; }
+.gr-tag { margin-inline-start: auto; font-size: .75rem; color: var(--muted); }
+.gr-m { color: var(--muted); font-size: .9rem; }
+.gr-seg button { padding: 2px 10px; font-size: .78rem; }
+.gr-more { padding: 6px 10px; }
 .bar { display: flex; height: 8px; border-radius: 99px; overflow: hidden; background: var(--new-soft); }
 .bar span { display: block; height: 100%; transition: width .3s; }
 .bar .b-g { background: var(--green); } .bar .b-o { background: var(--orange); } .bar .b-r { background: var(--red); } .bar .b-n { background: var(--new-soft); }
@@ -438,6 +450,10 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
       <span class="total" id="total"></span>
       <button type="button" class="acct" id="acctBtn" data-in="false" hidden><i></i><span id="acctLabel">התחברות</span></button>
     </div>
+    <div class="gsearch" id="gsearch">
+      <input type="search" id="gq" placeholder="🔍 חיפוש מילה בכל המילון (אנגלית ועברית)" aria-label="חיפוש מילה בכל המילון" autocomplete="off">
+      <div class="gres" id="gres" hidden></div>
+    </div>
     <div class="bar" id="bar" aria-hidden="true"></div>
     <div class="chips" id="chips" role="group" aria-label="אילו מילים לתרגל"></div>
   </header>
@@ -774,6 +790,33 @@ function unitLabelText(set) {
   const txt = nums.length ? (nums.length === 1 ? "יחידה " : "יחידות ") + parts.join(", ") : "";
   const base = set.has("mine") ? (txt ? txt + " + המילים שלי" : "המילים שלי") : txt;
   return [base, dayTxt].filter(Boolean).join(" + ");
+}
+/* site-wide search */
+function globalSearch(q) {
+  const box = $("gres"), pq = plain(q.trim());
+  if (!pq || !DICT) { box.hidden = true; box.innerHTML = ""; return; }
+  const hits = [];
+  for (const lang of ["en", "he"]) {
+    for (const x of allWords(lang)) {
+      const pw = plain(x.w), pm = plain(x.m);
+      const rank = pw === pq ? 0 : pw.startsWith(pq) ? 1 : pw.includes(pq) ? 2 : pm.includes(pq) ? 3 : -1;
+      if (rank >= 0) hits.push({ ...x, lang, rank });
+    }
+  }
+  hits.sort((a, b) => a.rank - b.rank || a.w.length - b.w.length);
+  const shown = hits.slice(0, 15);
+  box.innerHTML = shown.length ? shown.map((x, i) => {
+    const st = statusOf(x.w, x.lang), canSay = x.lang === ui.lang ? canSpeak() : canSpeak(x.lang);
+    return `<div class="gr" data-gi="${i}">
+      <div class="gr-main"><span class="dot s-${st}"></span><b dir="${x.lang === "en" ? "ltr" : "rtl"}">${esc(x.w)}</b>${canSay ? `<button type="button" class="speak small" data-speak-lang="${x.lang}" data-speak="${esc(x.w)}" aria-label="השמעת המילה">🔊</button>` : ""}
+        <span class="gr-tag">${x.lang === "en" ? "אנגלית" : "עברית"} · ${x.u ? "יחידה " + x.u : "המילים שלי"}</span></div>
+      <div class="gr-m">${esc(x.m)}</div>
+      <div class="seg gr-seg">${["g", "o", "r"].map((k) => `<button type="button" data-gset="${k}" data-s="${k}" aria-pressed="${st === k}"><span class="dot s-${k}"></span>${STATUS[k]}</button>`).join("")}</div>
+    </div>`;
+  }).join("") + (hits.length > shown.length ? `<p class="muted-note gr-more">ועוד ${hits.length - shown.length} תוצאות. אפשר לדייק את החיפוש.</p>` : "")
+    : `<p class="muted-note gr-more">לא נמצאו מילים שמתאימות ל־"${esc(q.trim())}".</p>`;
+  box._hits = shown;
+  box.hidden = false;
 }
 function renderUnitSelect() {
   const set = selectedUnits(), all = allWords();
@@ -1265,8 +1308,22 @@ function resetView() { for (const k in cache) delete cache[k]; listShown = PAGE;
 
 /* ---------- Events ---------- */
 document.addEventListener("click", (e) => {
+  const gs = e.target.closest && e.target.closest("[data-gset]");
+  if (gs) {
+    const x = $("gres")._hits[Number(gs.closest(".gr").dataset.gi)];
+    if (x) {
+      const prev = statusOf(x.w, x.lang), next = gs.dataset.gset;
+      if (prev !== next && x.lang === ui.lang) logRate(prev, next, 1, x.lang, x.w);
+      setEntry(x.w, { s: next }, x.lang);
+      globalSearch($("gq").value); renderHeader();
+      if (ui.view === "list") renderListRows();
+    }
+    return;
+  }
+  const gbox = document.getElementById("gsearch");
+  if (gbox && !e.target.closest("#gsearch")) $("gres").hidden = true;
   const sp = e.target.closest && e.target.closest("[data-speak]");
-  if (sp) { e.preventDefault(); e.stopPropagation(); speakWord(sp.dataset.speak); sp.classList.add("on"); setTimeout(() => sp.classList.remove("on"), 600); return; }
+  if (sp) { e.preventDefault(); e.stopPropagation(); speakWord(sp.dataset.speak, sp.dataset.speakLang || ui.lang); sp.classList.add("on"); setTimeout(() => sp.classList.remove("on"), 600); return; }
   const pick = document.getElementById("unitPick");
   if (pick && pick.open && !e.target.closest("#unitPick")) pick.open = false;
   if (e.target.closest("#homeLink")) {
@@ -1357,6 +1414,7 @@ document.addEventListener("click", (e) => {
     save(ui.lang); render(); return;
   }
 });
+document.addEventListener("focusin", (e) => { if (e.target.id === "gq" && e.target.value.trim()) globalSearch(e.target.value); });
 document.addEventListener("toggle", (e) => {
   const row = e.target;
   if (!row.classList || !row.classList.contains("row") || !row.open || row.querySelector(".row-body")) return;
@@ -1367,8 +1425,9 @@ document.addEventListener("change", (e) => {
   const gmap = { gExam: ["exam", (v) => v], gPerWeek: ["perWeek", Number], gReview: ["review", Number], gRed: ["red", null], gManual: ["manual", (v) => Math.max(1, Math.min(1000, Number(v) || 1))], gManualPer: ["manualPer", (v) => v] };
   if (gmap[e.target.id]) { const [k, f] = gmap[e.target.id]; ui.goals[k] = f ? f(e.target.value) : e.target.checked; goalsChanged(); renderGoals(); return; }
 });
-let searchTimer = null;
+let searchTimer = null, gTimer = null;
 document.addEventListener("input", (e) => {
+  if (e.target.id === "gq") { clearTimeout(gTimer); const v = e.target.value; gTimer = setTimeout(() => globalSearch(v), 150); return; }
   if (e.target.id === "search") {
     query = e.target.value; listShown = PAGE;
     clearTimeout(searchTimer); searchTimer = setTimeout(renderListRows, 200);
@@ -1461,6 +1520,7 @@ document.addEventListener("submit", (e) => {
   $("addMsg").textContent = `"${w}" נוספה ל"המילים שלי".`;
 });
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && e.target.id === "gq") { e.target.value = ""; globalSearch(""); e.target.blur(); return; }
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "z" || e.key === "Z" || e.key === "ז") && !e.target.closest("textarea, input") && undoStack.length && ui.view === "practice") {
     e.preventDefault(); undoRate(); return;
   }
