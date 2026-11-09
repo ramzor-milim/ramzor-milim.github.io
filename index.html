@@ -1046,7 +1046,7 @@ function renderGoals() {
         <label class="gf"><span>ימי תרגול בשבוע</span><select id="gPerWeek">${[3, 4, 5, 6, 7].map((n) => `<option${n === G.perWeek ? " selected" : ""}>${n}</option>`).join("")}</select></label>
         <label class="gf"><span>ימי חזרה לפני המבחן</span><select id="gReview">${[0, 3, 7, 14].map((n) => `<option value="${n}"${n === G.review ? " selected" : ""}>${n}</option>`).join("")}</select></label>
         <label class="gf check"><input type="checkbox" id="gRed"${G.red ? " checked" : ""}><span>לכלול גם מילים אדומות (שאולי תוותרו עליהן)</span></label>
-        <p class="muted-note gf-wide">נספרות מילים חדשות ומילים בכתום ${langName}: עכשיו ${P.c.n.toLocaleString("he-IL")} חדשות ו־${P.c.o} בכתום${G.red ? ` ו־${P.c.r} באדום` : ""}.</p>`
+        <p class="muted-note gf-wide">נספרות מילים חדשות ומילים בכתום ${langName}: עכשיו ${P.c.n.toLocaleString("he-IL")} חדשות ו־${P.c.o} בכתום${G.red ? ` ו־${P.c.r} באדום` : ""}. ${P.c.g.toLocaleString("he-IL")} המילים שכבר בירוק לא נספרות, כי אתם כבר יודעים אותן.</p>`
       : `
         <label class="gf"><span>כמה מילים</span><input type="number" id="gManual" min="1" max="1000" value="${G.manual}"></label>
         <label class="gf"><span>ב־</span><select id="gManualPer"><option value="day"${G.manualPer === "day" ? " selected" : ""}>יום</option><option value="week"${G.manualPer === "week" ? " selected" : ""}>שבוע</option></select></label>
