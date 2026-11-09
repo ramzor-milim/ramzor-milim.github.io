@@ -507,10 +507,14 @@ const plain = (s) => s.normalize("NFD").replace(/[֑-ׇ]/g, "").toLowerCase();
 const lsGet = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 
+/* the database can't store a list inside a list, so each plan day travels as one line of text */
+const PLAN_SEP = "";
+const planOut = (pl) => pl ? { size: pl.size || 0, created: pl.created || 0, days: (pl.days || []).map((d) => (Array.isArray(d) ? d.join(PLAN_SEP) : String(d))) } : null;
+const planIn = (pl) => ({ size: pl.size || 0, created: pl.created || 0, days: (pl.days || []).map((d) => (Array.isArray(d) ? d.slice() : String(d) ? String(d).split(PLAN_SEP) : [])) });
 function normLang(d) {
   const o = { p: {}, c: [], l: {} };
   if (d && d.g && typeof d.g === "object" && !Array.isArray(d.g)) o.g = JSON.parse(JSON.stringify(d.g));
-  if (d && d.pl && typeof d.pl === "object" && Array.isArray(d.pl.days)) o.pl = JSON.parse(JSON.stringify(d.pl));
+  if (d && d.pl && typeof d.pl === "object" && Array.isArray(d.pl.days)) o.pl = planIn(d.pl);
   if (d && d.l && typeof d.l === "object" && !Array.isArray(d.l)) o.l = JSON.parse(JSON.stringify(d.l));
   if (!d || typeof d !== "object") return o;
   if (d.p && typeof d.p === "object") {
@@ -1450,7 +1454,7 @@ async function writeLang(lang) {
   if (wBusy[lang]) { wDirty[lang] = true; return; }
   wBusy[lang] = true;
   try {
-    await fb.setDoc(fb.doc(fb.db, "users", account.uid, "progress", lang), { p: state.p[lang], c: state.c[lang], l: (state.l || {})[lang] || {}, g: ui.goals || null, pl: (ui.plans || {})[lang] || null, t: Date.now() });
+    await fb.setDoc(fb.doc(fb.db, "users", account.uid, "progress", lang), { p: state.p[lang], c: state.c[lang], l: (state.l || {})[lang] || {}, g: ui.goals || null, pl: typeof planOut === "function" ? planOut((ui.plans || {})[lang]) : null, t: Date.now() });
     localSyncText();
   } catch (e) { setSync("השמירה במשתמשת לא הצליחה כרגע. ההתקדמות שמורה בדפדפן ותישלח שוב בשינוי הבא."); }
   wBusy[lang] = false;
