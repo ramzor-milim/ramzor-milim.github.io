@@ -637,13 +637,13 @@ dialog .fb-kind label:has(input:checked) { border-color: var(--accent); backgrou
       <button type="button" id="view-goals" data-view="goals">יעדים <span class="beta">beta</span></button>
     </div>
     <span class="viewbar-end">
-      <button type="button" class="link" id="focusBtn" title="רק המילה, הפירוש והכפתורים · Esc ליציאה">⛶ מצב מיקוד</button>
+      <button type="button" class="link" id="focusBtn" dir="ltr" title="רק המילה, הפירוש והכפתורים · Esc ליציאה">⛶ Focus Mode</button>
       <button type="button" class="link" id="shuffleBtn"></button>
     </span>
   </div>
 
   <div class="wmodal" id="wordModal" hidden><div class="wm-box" role="dialog" aria-modal="true" aria-label="המילה" id="wmBox"></div></div>
-  <button type="button" class="how-link focus-exit" id="focusExit">✕ יציאה ממצב מיקוד</button>
+  <button type="button" class="how-link focus-exit" id="focusExit">✕ יציאה מ-<bdi>Focus Mode</bdi></button>
   <main id="main"><div class="empty"><h2>טוען את המילון…</h2></div></main>
 
   <footer>
