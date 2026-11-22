@@ -42,7 +42,7 @@ button, summary, a, label { -webkit-tap-highlight-color: transparent; }
 .rate button, .nav button, .btn-reveal, .chip { touch-action: manipulation; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.app { max-width: 640px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 40px; }
+.app { overflow-x: clip; max-width: 640px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 40px; }
 
 header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 14px 12px; display: grid; gap: 12px; border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -1130,7 +1130,7 @@ document.addEventListener("pointermove", (e) => {
   d.dx = d.axis === "x" ? dx : dx * 0.2;
   d.dy = dy * 0.2;
   const s = dragTarget(d), thr = d.axis === "x" ? d.card.offsetWidth * 0.3 : 90;
-  d.card.style.transform = `translate(${d.dx}px, ${d.dy}px) rotate(${d.dx * 0.05}deg)`;
+  $("main").style.transform = `translateX(${d.dx}px)`;   // the whole practice area follows the finger
   const stamp = d.card.querySelector(".swipe-stamp");
   stamp.dataset.s = s; stamp.textContent = SWIPE_LABEL[s]; stamp.style.opacity = Math.min(1, Math.abs(along) / thr);
   if (Math.abs(along) >= thr) d.card.dataset.swipe = s; else delete d.card.dataset.swipe;
@@ -1149,20 +1149,24 @@ function endDrag(e, cancelled) {
   const go = !cancelled && (along > (d.axis === "x" ? W * 0.3 : 90) || (speed > 0.5 && along > 30));
   if (!go) {
     card.classList.remove("dragging"); delete card.dataset.swipe;
-    card.style.transition = "transform 280ms cubic-bezier(0.23, 1, 0.32, 1)";
-    card.style.transform = "";
+    const area = $("main");
+    area.style.transition = "transform 280ms cubic-bezier(0.23, 1, 0.32, 1)";
+    area.style.transform = "";
     const st = card.querySelector(".swipe-stamp"); if (st) { st.style.transition = "opacity 200ms"; st.style.opacity = 0; }
-    setTimeout(() => { card.style.transition = ""; st && st.remove(); }, 300);
+    setTimeout(() => { area.style.transition = ""; st && st.remove(); }, 300);
     return;
   }
-  const finish = () => { swipeBusy = false; rate(s); const c = document.querySelector("#main > .card"); if (c) c.classList.add("card-in"); };
+  const area = $("main"), dir = Math.sign(d.dx) || 1;
+  const finish = () => {
+    swipeBusy = false; area.style.transition = ""; area.style.transform = ""; area.style.opacity = "";
+    rate(s);
+    if (!calmMotion()) area.animate([{ transform: `translateX(${-dir * 40}%)`, opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 240, easing: "cubic-bezier(0.23, 1, 0.32, 1)" });
+  };
   if (calmMotion()) return finish();
   swipeBusy = true;
-  const toX = d.axis === "x" ? Math.sign(d.dx) * (window.innerWidth + W) * 0.8 : d.dx;
-  const toY = d.dy;
-  card.style.transition = "transform 220ms ease-out, opacity 220ms ease-out";
-  card.style.transform = `translate(${toX}px, ${toY}px) rotate(${(toX * 0.04).toFixed(1)}deg)`;
-  card.style.opacity = "0";
+  area.style.transition = "transform 200ms ease-in, opacity 200ms ease-in";
+  area.style.transform = `translateX(${dir * window.innerWidth}px)`;
+  area.style.opacity = "0";
   setTimeout(finish, 200);
 }
 document.addEventListener("pointerup", (e) => endDrag(e, false));
