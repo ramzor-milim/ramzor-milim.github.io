@@ -389,6 +389,10 @@ textarea::placeholder, input::placeholder { color: var(--muted); opacity: .8; }
 
 .rate { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; direction: ltr; } /* same left-to-right order as keys 1 2 3 */
 .rate button { direction: rtl; }
+/* computers and tablets: when the open meaning makes the card taller than the window, the rating buttons stay pinned at the bottom of the screen */
+@media (min-width: 561px) {
+  #main > .rate { position: sticky; bottom: 0; z-index: 3; background: var(--bg); margin-top: 4px; padding-block: 8px; }
+}
 .rate button { border: 1.5px solid; border-radius: 14px; padding: 12px 6px; font-weight: 700; display: grid; justify-items: center; gap: 2px; transition: transform 140ms var(--ease-out); }
 .rate button:active { transform: scale(.97); }
 .rate small { font-weight: 400; font-size: .72rem; opacity: .8; }
