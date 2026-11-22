@@ -1623,7 +1623,12 @@ document.addEventListener("click", (e) => {
 document.addEventListener("focusin", (e) => { if (e.target.id === "gq" && e.target.value.trim()) globalSearch(e.target.value); });
 document.addEventListener("toggle", (e) => {
   const row = e.target;
-  if (!row.classList || !row.classList.contains("row") || !row.open || row.querySelector(".row-body")) return;
+  if (!row.classList || !row.classList.contains("row") || !row.open) return;
+  const before = row.getBoundingClientRect().top;
+  document.querySelectorAll("details.row[open]").forEach((r) => { if (r !== row) r.open = false; });   // one word open at a time
+  const shift = row.getBoundingClientRect().top - before;
+  if (shift) window.scrollBy(0, shift);   // keep the tapped word where it was on screen
+  if (row.querySelector(".row-body")) return;
   const x = listItems[Number(row.dataset.i)]; if (x) row.insertAdjacentHTML("beforeend", rowBodyHTML(x));
 }, true);
 document.addEventListener("change", (e) => {
