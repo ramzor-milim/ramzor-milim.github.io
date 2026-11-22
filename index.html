@@ -124,11 +124,14 @@ body.modal-open { overflow: hidden; }
 .chip[aria-pressed="true"] .check { background: var(--ink); border-color: var(--ink); }
 .chip[aria-pressed="true"] .check::after { content: ""; position: absolute; inset: 1px 3px 3px; border: solid var(--surface); border-width: 0 2px 2px 0; transform: rotate(45deg); }
 
-/* phone: the sticky header slides away while scrolling down and comes back on scroll up */
+/* phone: the header scrolls away with the page; a scroll up brings it back pinned to the top */
 @media (max-width: 560px) {
-  header { transition: transform 250ms var(--ease-out); }
-  header.hdr-hide { transform: translateY(calc(-100% - env(safe-area-inset-top, 0px))); }
+  header { position: relative; top: auto; }
+  header.hdr-pin { position: sticky; top: env(safe-area-inset-top, 0px); animation: hdr-in 250ms var(--ease-out); box-shadow: 0 6px 16px rgb(0 0 0 / .08); }
+  header.hdr-pin.hdr-out { transform: translateY(calc(-100% - env(safe-area-inset-top, 0px))); transition: transform 200ms ease-in; }
+  #main { min-height: 100dvh; }   /* room to scroll the card up to the top of the screen */
 }
+@keyframes hdr-in { from { transform: translateY(-100%); } }
 /* phone: colour chips at about half the height (smaller number, one-line label) */
 @media (max-width: 560px) {
   .chip { padding: 3px 4px; }
@@ -1169,17 +1172,24 @@ document.addEventListener("pointerup", (e) => endDrag(e, false));
 document.addEventListener("pointercancel", (e) => endDrag(e, true));
 document.addEventListener("click", (e) => { if (eatClick && e.timeStamp - eatClick < 400) { e.stopPropagation(); e.preventDefault(); } eatClick = 0; }, true);
 
-/* phone: hide the header while scrolling down, show it again on scroll up */
+/* phone: the header scrolls away with the page; scrolling up brings it back pinned, scrolling down sends it away */
 (() => {
   const mq = matchMedia("(max-width: 560px)"), hdr = document.querySelector("header");
-  let lastY = scrollY, acc = 0;
+  let lastY = scrollY, acc = 0, outTimer = null;
+  const unpin = () => { clearTimeout(outTimer); hdr.classList.remove("hdr-pin", "hdr-out"); };
   addEventListener("scroll", () => {
     const y = scrollY, dy = y - lastY; lastY = y;
-    if (!mq.matches || y < hdr.offsetHeight) { hdr.classList.remove("hdr-hide"); acc = 0; return; }
+    if (!mq.matches || y <= 0) { unpin(); acc = 0; return; }
     const pick = document.getElementById("unitPick"), gres = document.getElementById("gres");
     if ((pick && pick.open) || (gres && !gres.hidden) || hdr.contains(document.activeElement)) return;   // keep it while in use
     acc = Math.sign(dy) === Math.sign(acc) ? acc + dy : dy;
-    if (acc > 12) hdr.classList.add("hdr-hide"); else if (acc < -12) hdr.classList.remove("hdr-hide");
+    const pinned = hdr.classList.contains("hdr-pin") && !hdr.classList.contains("hdr-out");
+    if (acc < -12 && !pinned && y > hdr.offsetHeight) {          // scrolling up, header out of view: bring it back
+      clearTimeout(outTimer); hdr.classList.remove("hdr-out"); hdr.classList.add("hdr-pin");
+    } else if (acc > 12 && pinned) {                               // scrolling down: send it away
+      hdr.classList.add("hdr-out");
+      outTimer = setTimeout(unpin, 220);
+    }
   }, { passive: true });
 })();
 
