@@ -507,6 +507,11 @@ dialog .nick-row input { flex: 1; min-width: 0; }
 dialog .nick-row button { flex: none; }
 dialog .forgot { justify-self: start; font-size: .85rem; }
 dialog .nick-out { border-top: 0; padding-top: 0; margin-top: 0; border-bottom: 1px solid var(--line); padding-bottom: 6px; display: grid; gap: 6px; }
+dialog .merge { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 4px; display: grid; gap: 8px; }
+dialog .merge > .link { justify-self: start; font-size: .9rem; }
+dialog #mergeBox { display: grid; gap: 8px; }
+dialog #mergeBox[hidden] { display: none; }
+dialog #mergeForm { display: grid; gap: 6px; }
 dialog .nick-ok { color: var(--green); font-weight: 600; min-height: 1.2em; }
 dialog .secondary { border: 1.5px solid var(--accent); background: transparent; color: var(--accent); border-radius: 12px; padding: 9px 16px; font-weight: 700; }
 dialog .google { border: 1px solid var(--line); background: var(--bg); border-radius: 12px; padding: 10px 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
@@ -587,10 +592,10 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
     </div>
     <button type="button" class="google" id="googleBtn"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>כניסה עם Google</button>
     <p class="err" id="googleErr" role="alert"></p>
-    <div class="or">או עם שם משתמש / אימייל וסיסמה</div>
+    <div class="or">או עם אימייל וסיסמה</div>
     <form id="acctForm" novalidate>
-      <label for="acctUser">שם משתמש או אימייל</label>
-      <p class="note">עם אימייל אפשר לשחזר את הסיסמה אם שוכחים אותה.</p>
+      <label for="acctUser">אימייל</label>
+      <p class="note">נרשמתם בעבר עם שם משתמש? אפשר להקליד אותו כאן וללחוץ "כניסה".</p>
       <input id="acctUser" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="100">
       <label for="acctPass">סיסמה (לפחות 6 תווים)</label>
       <input id="acctPass" name="password" type="password" autocomplete="current-password">
@@ -601,7 +606,6 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
       </div>
       <button type="button" class="link forgot" id="forgotBtn">שכחתי סיסמה</button>
       <p class="note" id="forgotMsg" role="status"></p>
-      <p class="note">מי שנרשם עם שם משתמש (בלי אימייל) לא יכול לשחזר סיסמה שנשכחה, אז כדאי לרשום אותה במקום בטוח, או להירשם עם Google.</p>
     </form>
   </div>
   <div class="pane" id="acctIn" hidden>
@@ -622,6 +626,21 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
       <p class="err" id="emailErr" role="alert"></p>
       <p class="note nick-ok" id="emailMsg" role="status"></p>
     </form>
+    <div class="merge">
+      <button type="button" class="link" id="mergeOpen">יש לך עוד משתמש באתר? איחוד משתמשים</button>
+      <div id="mergeBox" hidden>
+        <p class="note">נרשמת פעמיים (למשל פעם עם Google ופעם עם אימייל או שם משתמש)? אפשר לאחד: ההתקדמות משני המשתמשים תעבור למשתמש הזה, והמשתמש השני יימחק. מילה שסומנה אחרת בשניהם תקבל את הסימון החדש יותר.</p>
+        <button type="button" class="google" id="linkGoogle"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>איחוד עם חשבון Google</button>
+        <form id="mergeForm" novalidate>
+          <label for="mergeUser" id="mergeUserLbl">או: האימייל / שם המשתמש של המשתמש השני</label>
+          <input id="mergeUser" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="100">
+          <label for="mergePass">הסיסמה שלו</label>
+          <div class="nick-row"><input id="mergePass" type="password" autocomplete="off"><button type="submit" class="primary" id="mergeSave">איחוד</button></div>
+        </form>
+        <p class="err" id="mergeErr" role="alert"></p>
+        <p class="note nick-ok" id="mergeMsg" role="status"></p>
+      </div>
+    </div>
     <div class="btns"><button type="button" class="secondary" id="logoutBtn">יציאה מהמשתמש</button></div>
   </div>
   <button type="button" class="link" id="acctClose">סגירה</button>
@@ -724,6 +743,7 @@ function setEntry(w, patch, lang = ui.lang) {
   if (!cur.pa || !cur.pa.length) delete cur.pa;
   if (!cur.f || !cur.f.length) delete cur.f;
   if (!cur.h || !cur.h.length) delete cur.h;
+  if ("s" in patch && (patch.s || "n") !== (entry(w, lang).s || "n")) cur.st = Date.now();   // when the colour was set, so merges keep the newer one
   if (!cur.s || cur.s === "n") delete cur.s;
   if (Object.keys(cur).length) state.p[lang][w] = cur; else delete state.p[lang][w];
   save(lang);
@@ -1919,7 +1939,8 @@ async function writeLang(lang) {
   wBusy[lang] = false;
   if (wDirty[lang]) { wDirty[lang] = false; writeLang(lang); }
 }
-const writeBusy = (l) => wTimers[l] || wBusy[l] || wDirty[l];
+let mergeBusy = false;
+const writeBusy = (l) => mergeBusy || wTimers[l] || wBusy[l] || wDirty[l];
 const isEditing = () => !!document.activeElement && /^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName) && !document.activeElement.closest("dialog");
 function refreshAfterData() {
   for (const k in cache) delete cache[k];
@@ -1960,6 +1981,7 @@ async function loadFirebase() {
   const [appM, authM, fsM] = await Promise.all([import(base + "firebase-app.js"), import(base + "firebase-auth.js"), import(base + "firebase-firestore.js")]);
   const app = appM.initializeApp(FIREBASE_CONFIG);
   fb = {
+    mods: { app: appM, auth: authM, fs: fsM },
     auth: authM.getAuth(app), db: fsM.getFirestore(app),
     signIn: authM.signInWithEmailAndPassword, signUp: authM.createUserWithEmailAndPassword,
     signOut: authM.signOut, onAuth: authM.onAuthStateChanged,
@@ -1971,22 +1993,36 @@ async function loadFirebase() {
   };
   return fb;
 }
-function mergeLang(lang, remote) {
+const uniqList = (x, y) => { const o = (x || []).slice(); (y || []).forEach((v) => { if (!o.some((q) => JSON.stringify(q) === JSON.stringify(v))) o.push(v); }); return o; };
+/* one word from two sources: the newer colour wins (st = when it was set); with no times, `a` (the preferred side) wins
+   when both have a colour; associations, stars and hidden lists are combined */
+function mergeEntry(a, b) {
+  if (!a) return { ...b }; if (!b) return { ...a };
+  const out = { ...b, ...a }, ta = a.st || 0, tb = b.st || 0;
+  const src = ta !== tb ? (ta > tb ? a : b) : (a.s ? a : b);
+  if (src.s) out.s = src.s; else delete out.s;
+  if (src.st) out.st = src.st; else delete out.st;
+  for (const k of ["a", "f", "h", "pa"]) { const v = uniqList(a[k], b[k]); if (v.length) out[k] = v; else delete out[k]; }
+  return out;
+}
+function mergeP(pa, pb) { const p = { ...pb }; for (const [w, v] of Object.entries(pa || {})) p[w] = mergeEntry(v, (pb || {})[w]); return p; }
+/* opts.add: `remote` is a second account (daily counts add up) rather than this browser's copy of the same account;
+   opts.mineFirst: with no times, this side's colours win */
+function mergeLang(lang, remote, opts = {}) {
   if (typeof applyRemoteGoals === "function") applyRemoteGoals(lang, remote);
-  if (state.l && remote.l) {   // daily log: keep the higher count per day and field
+  if (state.l && remote.l) {   // daily log: same account → keep the higher count; two accounts → add them up
     const L = (state.l[lang] = state.l[lang] || {});
+    const join = (x, y) => opts.add ? (x || 0) + (y || 0) : Math.max(x || 0, y || 0);
     for (const [day, r] of Object.entries(remote.l)) {
       const d = (L[day] = L[day] || { n: 0, up: 0, nw: 0, t: {} });
-      for (const f of ["n", "up", "nw"]) d[f] = Math.max(d[f] || 0, r[f] || 0);
+      for (const f of ["n", "up", "nw"]) d[f] = join(d[f], r[f]);
       d.t = d.t || {};
-      for (const [k, v] of Object.entries(r.t || {})) d.t[k] = Math.max(d.t[k] || 0, v);
+      for (const [k, v] of Object.entries(r.t || {})) d.t[k] = join(d.t[k], v);
       if (r.w) d.w = Object.assign({}, r.w, d.w || {});
     }
   }
-  const p = { ...state.p[lang] };
-  for (const [w, v] of Object.entries(remote.p)) p[w] = { ...(p[w] || {}), ...v };
+  state.p[lang] = opts.mineFirst ? mergeP(state.p[lang], remote.p) : mergeP(remote.p, state.p[lang]);
   const seen = new Set(remote.c.map((x) => x.w));
-  state.p[lang] = p;
   state.c[lang] = remote.c.concat(state.c[lang].filter((x) => !seen.has(x.w)));
 }
 function renderAccount() {
@@ -2000,6 +2036,8 @@ function renderAccount() {
     $("nickDefault").textContent = account.baseShare;
     if (document.activeElement !== $("nickInput")) $("nickInput").value = account.nick || "";
     $("emailForm").hidden = !account.canAddEmail;
+    $("linkGoogle").hidden = !!account.google;
+    $("mergeUserLbl").textContent = account.google ? "האימייל / שם המשתמש של המשתמש השני" : "או: האימייל / שם המשתמש של המשתמש השני";
   }
 }
 async function startAccounts() {
@@ -2013,7 +2051,7 @@ async function startAccounts() {
     const viaPassword = (u.email || "").endsWith("@ramzor-milim.app");
     const viaGoogle = (u.providerData || []).some((p) => p.providerId === "google.com");
     const viaEmail = !viaPassword && !viaGoogle;   // signed up with a real email + password (can reset it)
-    account = { uid: u.uid, name: viaPassword ? userName(u.email) : viaEmail ? (u.email || "משתמש") : (u.displayName || u.email || "משתמש Google"), canAddEmail: viaPassword };
+    account = { uid: u.uid, name: viaPassword ? userName(u.email) : viaEmail ? (u.email || "משתמש") : (u.displayName || u.email || "משתמש Google"), canAddEmail: viaPassword, google: viaGoogle };
     account.baseShare = (viaPassword ? account.name : viaEmail ? "" : (u.displayName || "").split(" ")[0]) || "משתמש";   // never show an email address publicly
     account.nick = ""; setShareName(); myNotes = { en: {}, he: {} };
     renderAccount(); setSync("מסנכרן עם המשתמש…");
@@ -2139,7 +2177,7 @@ document.addEventListener("submit", async (e) => {
 
 document.addEventListener("click", async (e) => {
   const id = e.target.closest("button") && e.target.closest("button").id;
-  if (id === "acctBtn") { $("acctErr").textContent = ""; $("googleErr").textContent = ""; $("nickErr").textContent = ""; $("nickMsg").textContent = ""; $("nickNewErr").textContent = ""; $("forgotMsg").textContent = ""; $("emailErr").textContent = ""; $("emailMsg").textContent = ""; $("acctDlg").showModal(); Nav.open("acct"); }
+  if (id === "acctBtn") { $("acctErr").textContent = ""; $("googleErr").textContent = ""; $("nickErr").textContent = ""; $("nickMsg").textContent = ""; $("nickNewErr").textContent = ""; $("forgotMsg").textContent = ""; $("emailErr").textContent = ""; $("emailMsg").textContent = ""; $("mergeErr").textContent = ""; $("mergeMsg").textContent = ""; $("mergeBox").hidden = true; $("acctDlg").showModal(); Nav.open("acct"); }
   if (id === "acctClose") $("acctDlg").close();
   if (id === "googleBtn") {
     const gErr = $("googleErr"); gErr.textContent = "";
@@ -2153,6 +2191,7 @@ document.addEventListener("click", async (e) => {
       else if (code === "auth/popup-blocked" || homeScreen) gErr.textContent = homeScreen
         ? "באפליקציה שעל מסך הבית אייפון לא תמיד מאפשר כניסה עם Google. אפשר להשתמש כאן בשם משתמש וסיסמה, או לפתוח את האתר בספארי."
         : "הדפדפן חסם את חלון הכניסה. אפשרו חלונות קופצים לאתר הזה ונסו שוב.";
+      else if (code === "auth/account-exists-with-different-credential") gErr.textContent = "כבר יש משתמש עם האימייל הזה, עם סיסמה. היכנסו עם האימייל והסיסמה, ואז אפשר לחבר את Google בחלון המשתמש (\"איחוד משתמשים\").";
       else if (code === "auth/unauthorized-domain" || code === "auth/operation-not-allowed") gErr.textContent = "הכניסה עם Google עדיין לא הופעלה באתר הזה.";
       else gErr.textContent = AUTH_ERRORS[code] || "הכניסה עם Google לא הצליחה. נסו שוב.";
       pendingNick = "";
@@ -2169,6 +2208,7 @@ document.addEventListener("submit", async (e) => {
   const err = $("acctErr");
   const isMail = name.includes("@");
   if (isMail && !EMAIL_RE.test(name)) { err.textContent = "האימייל לא נראה תקין. בדקו שהקלדתם אותו נכון."; return; }
+  if (mode === "signup" && !isMail) { err.textContent = "להרשמה צריך אימייל. מי שכבר יש לו שם משתמש יכול להיכנס איתו בכפתור \"כניסה\"."; return; }
   if (!isMail && name.length < 2) { err.textContent = "שם המשתמש צריך להיות לפחות 2 תווים."; return; }
   if (!isMail && /\s/.test(name)) { err.textContent = "שם המשתמש לא יכול להכיל רווחים."; return; }
   const email = isMail ? name.toLowerCase() : userEmail(name);
@@ -2184,14 +2224,115 @@ document.addEventListener("submit", async (e) => {
     $("acctDlg").close();
   } catch (ex) {
     const code = ex && ex.code;
-    err.textContent = isMail && code === "auth/email-already-in-use" ? "כבר יש משתמש עם האימייל הזה. אפשר ללחוץ \"כניסה\", או \"שכחתי סיסמה\" אם צריך."
-      : isMail && /invalid-(login-)?credential|wrong-password/.test(code || "") ? "האימייל או הסיסמה לא נכונים. אם שכחתם את הסיסמה, לחצו \"שכחתי סיסמה\"."
+    err.textContent = isMail && code === "auth/email-already-in-use" ? "כבר יש משתמש עם האימייל הזה. אם נרשמתם עם Google, היכנסו בכפתור של Google למעלה. אחרת לחצו \"כניסה\" (או \"שכחתי סיסמה\")."
+      : isMail && /invalid-(login-)?credential|wrong-password/.test(code || "") ? "האימייל או הסיסמה לא נכונים. אם נרשמתם עם Google, היכנסו בכפתור של Google למעלה. אם שכחתם את הסיסמה, לחצו \"שכחתי סיסמה\"."
       : isMail && code === "auth/user-not-found" ? "אין משתמש עם האימייל הזה. אפשר ליצור אותו עם \"יצירת משתמש חדש\"."
       : isMail && code === "auth/invalid-email" ? "האימייל לא נראה תקין. בדקו שהקלדתם אותו נכון."
       : AUTH_ERRORS[code] || "משהו השתבש. נסו שוב בעוד רגע.";
     pendingNick = "";
   }
   $("loginBtn").disabled = $("signupBtn").disabled = false;
+});
+
+
+/* ---------- merging a second account of the same person into this one ----------
+   The other account is signed in on a separate, memory-only Firebase instance, so this one stays signed in.
+   Its progress is combined into this account, its shared associations move here, then it is deleted. */
+let fb2 = null;
+function otherAuth() {
+  if (fb2) return fb2;
+  const m = fb.mods, app2 = m.app.initializeApp(FIREBASE_CONFIG, "merge");
+  fb2 = { auth: m.auth.initializeAuth(app2, { persistence: m.auth.inMemoryPersistence }), db: m.fs.getFirestore(app2) };
+  return fb2;
+}
+async function absorbAccount(u2) {
+  const me = fb.auth.currentUser, db2 = fb2.db;
+  if (!me || !account || u2.uid === me.uid) return false;
+  await flushWrites().catch(() => {});
+  mergeBusy = true;
+  try {
+    for (const lang of LANGS) {
+      const [s2, s1] = await Promise.all([fb.getDoc(fb.doc(db2, "users", u2.uid, "progress", lang)), fb.getDoc(fb.doc(fb.db, "users", me.uid, "progress", lang))]);
+      if (!s2.exists()) continue;
+      const d2 = s2.data(), t1 = s1.exists() ? s1.data().t || 0 : 0;
+      mergeLang(lang, normLang(d2), { add: true, mineFirst: t1 >= (d2.t || 0) });   // with no times, the account used more recently wins
+      for (const [id, w] of Object.entries(d2.sn || {})) {   // its shared associations become this account's
+        try {
+          const ref = fb.doc(db2, "shared", lang, "words", noteKey(w), "notes", id), snap = await fb.getDoc(ref);
+          if (!snap.exists() || snap.data().uid !== u2.uid) continue;
+          await fb.updateDoc(ref, { uid: me.uid, name: snap.data().name ? account.shareName : "" });
+          await fb.deleteDoc(fb.doc(db2, "noteIndex", id)).catch(() => {});
+          await fb.setDoc(fb.doc(fb.db, "noteIndex", id), { uid: me.uid, t: Date.now() }).catch(() => {});
+          rememberNote(lang, id, w);
+        } catch (e) {}
+      }
+    }
+    for (const k in notesCache) delete notesCache[k];
+    lsSet(LS_STATE, state);
+  } finally { mergeBusy = false; }
+  refreshAfterData();
+  await Promise.all(LANGS.map(writeLang));
+  await Promise.all(LANGS.map((l) => fb.deleteDoc(fb.doc(db2, "users", u2.uid, "progress", l)).catch(() => {})));
+  await fb.deleteDoc(fb.doc(db2, "members", u2.uid)).catch(() => {});
+  await fb.mods.auth.deleteUser(u2).catch(() => fb.mods.auth.signOut(fb2.auth));
+  loadCounts();
+  return true;
+}
+const MERGE_DONE = "האיחוד הושלם ✓ ההתקדמות משני המשתמשים נמצאת עכשיו כאן, והמשתמש השני נמחק.";
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.id === "mergeOpen") { $("mergeBox").hidden = !$("mergeBox").hidden; return; }
+  if (b.id !== "linkGoogle" || !account) return;
+  const err = $("mergeErr"), msg = $("mergeMsg"), A = fb.mods.auth;
+  err.textContent = ""; msg.textContent = ""; b.disabled = true;
+  try {
+    try {
+      await A.linkWithPopup(fb.auth.currentUser, new A.GoogleAuthProvider());
+      msg.textContent = "חשבון Google חובר ✓ מעכשיו אפשר להיכנס למשתמש הזה גם עם Google.";
+    } catch (ex) {
+      if (ex.code !== "auth/credential-already-in-use" && ex.code !== "auth/email-already-in-use") throw ex;
+      const cred = A.GoogleAuthProvider.credentialFromError(ex); if (!cred) throw ex;
+      msg.textContent = "מאחד את המשתמשים…";
+      const uc = await A.signInWithCredential(otherAuth().auth, cred);
+      await absorbAccount(uc.user);
+      let linked = true; await A.linkWithCredential(fb.auth.currentUser, cred).catch(() => { linked = false; });
+      msg.textContent = MERGE_DONE + (linked ? " מעכשיו אפשר להיכנס למשתמש הזה גם עם Google." : "");
+    }
+    await fb.auth.currentUser.reload().catch(() => {});
+    account.google = (fb.auth.currentUser.providerData || []).some((p) => p.providerId === "google.com");
+    renderAccount();
+  } catch (ex) {
+    msg.textContent = "";
+    const code = ex && ex.code;
+    if (code !== "auth/popup-closed-by-user" && code !== "auth/cancelled-popup-request")
+      err.textContent = code === "auth/popup-blocked" ? "הדפדפן חסם את חלון Google. אפשרו חלונות קופצים לאתר הזה ונסו שוב."
+        : code === "auth/requires-recent-login" ? "מטעמי אבטחה צריך להתחבר מחדש: צאו מהמשתמש, היכנסו שוב ונסו שוב."
+        : AUTH_ERRORS[code] || "האיחוד לא הצליח. נסו שוב בעוד רגע.";
+  }
+  b.disabled = false;
+});
+document.addEventListener("submit", async (e) => {
+  if (e.target.id !== "mergeForm") return;
+  e.preventDefault();
+  const err = $("mergeErr"), msg = $("mergeMsg");
+  err.textContent = ""; msg.textContent = "";
+  if (!account) return;
+  const name = $("mergeUser").value.trim(), pass = $("mergePass").value;
+  const email = name.includes("@") ? name.toLowerCase() : userEmail(name);
+  if (!name || !email) { err.textContent = "הקלידו את האימייל או שם המשתמש של המשתמש השני."; return; }
+  if (!pass) { err.textContent = "צריך להקליד את הסיסמה של המשתמש השני."; return; }
+  $("mergeSave").disabled = true; msg.textContent = "מאחד את המשתמשים…";
+  try {
+    const uc = await fb.mods.auth.signInWithEmailAndPassword(otherAuth().auth, email, pass);
+    if (uc.user.uid === fb.auth.currentUser.uid) { msg.textContent = ""; err.textContent = "זה המשתמש שכבר מחובר עכשיו. הקלידו את הפרטים של המשתמש השני."; }
+    else { await absorbAccount(uc.user); msg.textContent = MERGE_DONE; $("mergeUser").value = ""; $("mergePass").value = ""; }
+  } catch (ex) {
+    msg.textContent = "";
+    const code = ex && ex.code;
+    err.textContent = /invalid-(login-)?credential|wrong-password|user-not-found/.test(code || "") ? "האימייל / שם המשתמש או הסיסמה של המשתמש השני לא נכונים."
+      : AUTH_ERRORS[code] || "האיחוד לא הצליח. נסו שוב בעוד רגע.";
+  }
+  $("mergeSave").disabled = false;
 });
 
 /* forgot password (email accounts only) and adding an email to a username account */
