@@ -618,6 +618,7 @@ footer { margin-top: 26px; color: var(--muted); font-size: .82rem; display: grid
     <span class="viewbar-end">
       <button type="button" class="link" id="focusBtn" dir="ltr" title="רק המילה, הפירוש והכפתורים · Esc ליציאה">⛶ Focus Mode</button>
       <button type="button" class="link" id="shuffleBtn"></button>
+      <button type="button" class="link" id="reshuffleBtn" title="ערבוב המילים מחדש בסדר אקראי חדש (הסבב מתחיל מהתחלה)">🔀 ערבוב מחדש</button>
     </span>
   </div>
 
@@ -1032,6 +1033,7 @@ function renderHeader() {
   $("howBtn").setAttribute("aria-pressed", ui.view === "how");
   $("shuffleBtn").textContent = ui.shuffle ? "סדר: מעורבב" : "סדר: לפי המילון";
   $("shuffleBtn").hidden = $("focusBtn").hidden = ui.view !== "practice";
+  $("reshuffleBtn").hidden = ui.view !== "practice" || !ui.shuffle;   // only when the order is shuffled
   document.querySelector(".scope").hidden = document.getElementById("bar").hidden = document.getElementById("chips").hidden = ui.view === "how" || ui.view === "stats" || ui.view === "goals";
 }
 
@@ -1727,6 +1729,7 @@ document.addEventListener("click", (e) => {
   if (t.id === "focusBtn") { setFocus(true); return; }
   if (t.id === "focusExit") { setFocus(false); return; }
   if (t.id === "shuffleBtn") { ui.shuffle = !ui.shuffle; saveUI(); resetView(); return; }
+  if (t.id === "reshuffleBtn") { resetView(); return; }   // buildQueue shuffles again from scratch
   if (t.id === "revealBtn") { revealed = true; renderPractice(); return; }
   if (t.id === "focusAssocHide") { focusAssocFor = null; renderPractice(); return; }
   if (t.id === "focusAssocBtn") { focusAssocFor = queue[pos] && queue[pos].w; renderPractice(); return; }
