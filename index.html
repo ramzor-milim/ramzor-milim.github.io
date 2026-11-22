@@ -582,6 +582,16 @@ footer { margin-top: 26px; color: var(--muted); font-size: .82rem; display: grid
   .how > .how-demo { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
   .how > .how-steps, .how > .how-also { grid-column: 1 / -1; }
 }
+/* big computer screens (same breakpoint as the desktop layout): the welcome page uses the full desktop width - bigger headline, the 4 steps in one row */
+@media (hover: hover) and (pointer: fine) and (min-width: 1100px) {
+  .app:has(.how) { max-width: 1240px; }
+  .how { grid-template-columns: minmax(0, 1fr) 340px; column-gap: 72px; row-gap: 20px; padding-top: 12px; }
+  .how h2 { font-size: 2.7rem; }
+  .how-lead { font-size: 1.12rem; }
+  .how-demo { max-width: 340px; }
+  .how-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-top: 12px; }
+  .how-card { padding: 22px 20px; }
+}
 </style>
 
 <style>
