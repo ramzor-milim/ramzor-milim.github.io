@@ -130,6 +130,11 @@ body.modal-open { overflow: hidden; }
   header > .bar { order: 1; height: 4px; margin-top: -4px; }   /* thin progress line under the chips, pinned with them */
   #main { min-height: calc(100dvh - 80px); }   /* room to scroll the card up under the chips, even on short pages */
 }
+/* phone: the association box hint is smaller and gets room for two full lines instead of being cut off */
+@media (max-width: 560px) {
+  .assoc .composer textarea { min-height: 58px; }
+  .assoc .composer textarea::placeholder { font-size: 13px; line-height: 1.4; }
+}
 /* phone: colour chips at about half the height (smaller number, one-line label) */
 @media (max-width: 560px) {
   .chip { padding: 3px 4px; }
