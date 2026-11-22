@@ -565,6 +565,14 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
 </div>
 
 
+<dialog id="localTip" dir="rtl" lang="he">
+  <div class="pane">
+    <h2 tabindex="-1" autofocus>האסוציאציה נשמרה ✓</h2>
+    <p class="note">כרגע, בלי משתמש, האסוציאציות שלך נשמרות רק בדפדפן הזה. אם תחליפו מכשיר או תנקו את הדפדפן, הן ילכו לאיבוד.</p>
+    <p class="note">עם משתמש (בחינם) הן נשמרות בכל המכשירים, ואפשר גם לשתף אותן עם אחרים ולראות אסוציאציות של אחרים. מה שכבר כתבתם יעבור למשתמש אוטומטית.</p>
+    <div class="btns"><button type="button" class="primary" id="localTipSignup">הירשמו בחינם</button><button type="button" id="localTipOk">הבנתי</button></div>
+  </div>
+</dialog>
 <dialog id="acctDlg" dir="rtl" lang="he">
   <div class="pane" id="acctOut">
     <h2 tabindex="-1" autofocus>משתמש</h2>
@@ -2020,6 +2028,20 @@ async function startAccounts() {
   });
 }
 
+/* one-time tip after the first association saved without an account */
+const LS_LOCALTIP = "ramzor-localtip";
+function showLocalTip() {
+  if (account || lsGet(LS_LOCALTIP)) return;
+  lsSet(LS_LOCALTIP, 1);
+  setTimeout(() => { const d = $("localTip"); if (d && !d.open && !account) d.showModal(); }, 250);
+}
+{
+  const d = $("localTip");
+  $("localTipOk").addEventListener("click", () => d.close());
+  $("localTipSignup").addEventListener("click", () => { d.close(); const a = $("acctBtn"); if (a && !a.hidden) a.click(); });
+  d.addEventListener("click", (e) => { if (e.target !== d) return; const r = d.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) d.close(); });
+  addEventListener("popstate", () => { if (d.open) d.close(); });
+}
 /* account window: a tap outside it closes it (press and release both outside, so dragging out of a field doesn't) */
 {
   const dlg = $("acctDlg");
@@ -2251,7 +2273,7 @@ if (FIREBASE_CONFIG) {
   Assoc.othersLocked = () => !account;
   if (typeof Stats !== "undefined") Stats.enabled = () => !!account;   // progress tracking for signed-in users only
   Assoc.add = async (w, text, img) => {
-    if (!account) return text ? localAdd(w, text) : false;
+    if (!account) { if (!text) return false; const ok = await localAdd(w, text); if (ok) showLocalTip(); return ok; }
     try {
       await loadFirebase();
       const ref = fb.doc(notesCol(ui.lang, w));
