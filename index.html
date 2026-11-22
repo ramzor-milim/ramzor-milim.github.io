@@ -124,11 +124,17 @@ body.modal-open { overflow: hidden; }
 .chip[aria-pressed="true"] .check { background: var(--ink); border-color: var(--ink); }
 .chip[aria-pressed="true"] .check::after { content: ""; position: absolute; inset: 1px 3px 3px; border: solid var(--surface); border-width: 0 2px 2px 0; transform: rotate(45deg); }
 
-/* phone: the header scrolls up until only the colour chips are left pinned; a scroll up brings the whole header back */
+/* phone: swipe the header up to fold it down to the colour chips; pull the tab down (or tap it) to open it again */
+.hdr-tab { display: none; }
 @media (max-width: 560px) {
-  header { top: calc(env(safe-area-inset-top, 0px) + var(--hdr-peek, 0px)); transition: top 250ms var(--ease-out); }
-  header.hdr-pin { top: env(safe-area-inset-top, 0px); }
-  #main { min-height: 100dvh; }   /* room to scroll the card up under the chips */
+  header { touch-action: none; }
+  header .unit-menu, header .gres { touch-action: pan-y; }
+  header.hdr-collapsed:has(> #chips:not([hidden])) > :is(.brand, .scope, .gsearch, .bar) { display: none; }
+  header.hdr-collapsed:has(> #chips:not([hidden])) { padding-top: 8px; }
+  header.hdr-collapsed:has(> #chips:not([hidden])) .hdr-tab {
+    display: grid; place-items: center; position: absolute; left: 50%; bottom: -23px; translate: -50% 0; width: 64px; height: 22px; padding: 0;
+    background: var(--bg); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 12px 12px; color: var(--muted); font-size: .85rem; line-height: 1; }
+  header.hdr-collapsed + .viewbar { margin-top: 26px; }
 }
 /* phone: colour chips at about half the height (smaller number, one-line label) */
 @media (max-width: 560px) {
@@ -521,6 +527,7 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
     </div>
     <div class="bar" id="bar" aria-hidden="true"></div>
     <div class="chips" id="chips" role="group" aria-label="אילו מילים לתרגל"></div>
+    <button type="button" class="hdr-tab" id="hdrTab" aria-label="הצגת החלק העליון">▼</button>
   </header>
 
   <div class="viewbar">
@@ -1170,20 +1177,30 @@ document.addEventListener("pointerup", (e) => endDrag(e, false));
 document.addEventListener("pointercancel", (e) => endDrag(e, true));
 document.addEventListener("click", (e) => { if (eatClick && e.timeStamp - eatClick < 400) { e.stopPropagation(); e.preventDefault(); } eatClick = 0; }, true);
 
-/* phone: while scrolling down the header slides up until only the colour chips show; scrolling up shows all of it */
+/* phone: swipe up on the header to fold it to the colour chips; pull the tab down (or tap it) to open it again */
 (() => {
-  const mq = matchMedia("(max-width: 560px)"), hdr = document.querySelector("header"), chips = document.getElementById("chips");
-  const setPeek = () => hdr.style.setProperty("--hdr-peek", -(chips.hidden ? hdr.offsetHeight : chips.offsetTop - 6) + "px");
-  setPeek(); new ResizeObserver(setPeek).observe(hdr);
-  let lastY = scrollY, acc = 0;
-  addEventListener("scroll", () => {
-    const y = scrollY, dy = y - lastY; lastY = y;
-    if (!mq.matches || y <= 0) { hdr.classList.remove("hdr-pin"); acc = 0; return; }
-    const pick = document.getElementById("unitPick"), gres = document.getElementById("gres");
-    if ((pick && pick.open) || (gres && !gres.hidden) || hdr.contains(document.activeElement)) return;   // keep it while in use
-    acc = Math.sign(dy) === Math.sign(acc) ? acc + dy : dy;
-    if (acc < -12) hdr.classList.add("hdr-pin"); else if (acc > 12) hdr.classList.remove("hdr-pin");
-  }, { passive: true });
+  const mq = matchMedia("(max-width: 560px)"), hdr = document.querySelector("header");
+  let d = null, eat = 0;
+  const fold = (on) => {
+    if (hdr.classList.contains("hdr-collapsed") === on || (on && document.getElementById("chips").hidden)) return;
+    const pick = document.getElementById("unitPick"); if (pick) pick.open = false;
+    hdr.classList.toggle("hdr-collapsed", on);
+    if (!calmMotion()) hdr.animate([{ opacity: 0.4 }, { opacity: 1 }], { duration: 200, easing: "ease-out" });
+  };
+  hdr.addEventListener("pointerdown", (e) => {
+    if (e.pointerType !== "touch" || !mq.matches || e.target.closest("input, select, textarea, .unit-menu, .gres")) return;
+    d = { id: e.pointerId, x: e.clientX, y: e.clientY, done: false };
+  });
+  hdr.addEventListener("pointermove", (e) => {
+    if (!d || d.done || e.pointerId !== d.id) return;
+    const dy = e.clientY - d.y;
+    if (Math.abs(dy) < 25 || Math.abs(e.clientX - d.x) > Math.abs(dy)) return;
+    fold(dy < 0); d.done = true;
+  });
+  const end = (e) => { if (d && e.pointerId === d.id) { if (d.done) eat = e.timeStamp; d = null; } };
+  hdr.addEventListener("pointerup", end); hdr.addEventListener("pointercancel", end);
+  hdr.addEventListener("click", (e) => { if (eat && e.timeStamp - eat < 400) { e.stopPropagation(); e.preventDefault(); } eat = 0; }, true);
+  document.getElementById("hdrTab").addEventListener("click", () => fold(false));
 })();
 
 /* ---------- List ---------- */
