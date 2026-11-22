@@ -1132,6 +1132,7 @@ document.addEventListener("pointermove", (e) => {
   d.dy = dy * 0.2;
   const s = dragTarget(d), thr = d.axis === "x" ? d.card.offsetWidth * 0.3 : 90;
   $("main").style.transform = `translateX(${d.dx}px)`;   // the whole practice area follows the finger
+  d.card.style.transform = `rotate(${d.dx * 0.05}deg)`;     // and the card tilts like before
   const stamp = d.card.querySelector(".swipe-stamp");
   stamp.dataset.s = s; stamp.textContent = SWIPE_LABEL[s]; stamp.style.opacity = Math.min(1, Math.abs(along) / thr);
   if (Math.abs(along) >= thr) d.card.dataset.swipe = s; else delete d.card.dataset.swipe;
@@ -1153,6 +1154,7 @@ function endDrag(e, cancelled) {
     const area = $("main");
     area.style.transition = "transform 280ms cubic-bezier(0.23, 1, 0.32, 1)";
     area.style.transform = "";
+    card.style.transition = area.style.transition; card.style.transform = "";
     const st = card.querySelector(".swipe-stamp"); if (st) { st.style.transition = "opacity 200ms"; st.style.opacity = 0; }
     setTimeout(() => { area.style.transition = ""; st && st.remove(); }, 300);
     return;
@@ -1167,6 +1169,7 @@ function endDrag(e, cancelled) {
   swipeBusy = true;
   area.style.transition = "transform 200ms ease-in, opacity 200ms ease-in";
   area.style.transform = `translateX(${dir * window.innerWidth}px)`;
+  card.style.transition = area.style.transition; card.style.transform = `rotate(${dir * 18}deg)`;
   area.style.opacity = "0";
   setTimeout(finish, 200);
 }
