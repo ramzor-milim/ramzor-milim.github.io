@@ -135,6 +135,12 @@ body.modal-open { overflow: hidden; }
   .assoc .composer textarea { min-height: 58px; }
   .assoc .composer textarea::placeholder { font-size: 13px; line-height: 1.4; }
 }
+/* narrow phone with the login button in the top row: "how it works" shrinks to its "?" circle so both fit on one line */
+@media (max-width: 440px) {
+  .title-row:has(.acct:not([hidden])) { flex-wrap: nowrap; }
+  .title-row:has(.acct:not([hidden])) .how-link { font-size: 0; gap: 0; padding: 4px; }
+  .title-row .acct { max-width: 130px; min-width: 0; }
+}
 /* phone: colour chips at about half the height (smaller number, one-line label) */
 @media (max-width: 560px) {
   .chip { padding: 3px 4px; }
@@ -1182,6 +1188,13 @@ document.addEventListener("pointerup", (e) => endDrag(e, false));
 document.addEventListener("pointercancel", (e) => endDrag(e, true));
 document.addEventListener("click", (e) => { if (eatClick && e.timeStamp - eatClick < 400) { e.stopPropagation(); e.preventDefault(); } eatClick = 0; }, true);
 
+/* phone: the login button (public site only) moves up next to "how it works"; on a computer it stays in the units row */
+(() => {
+  const btn = document.getElementById("acctBtn"); if (!btn) return;
+  const home = btn.parentElement, top = document.querySelector(".title-row"), mq = matchMedia("(max-width: 560px)");
+  const place = () => { const to = mq.matches ? top : home; if (btn.parentElement !== to) to.appendChild(btn); };
+  place(); mq.addEventListener("change", place);
+})();
 /* phone: the sticky header is pulled up by its own height minus the chips row, so only the chips stay pinned */
 (() => {
   const hdr = document.querySelector("header"), chips = document.getElementById("chips");
