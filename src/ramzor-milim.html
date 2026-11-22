@@ -429,6 +429,7 @@ textarea::placeholder, input::placeholder { color: var(--muted); opacity: .8; }
 /* Tablets (wide + touch): wider column, bigger word and rating buttons. Computers (mouse) and phones (narrow) are untouched. */
 @media (hover: none) and (pointer: coarse) and (min-width: 768px) {
   .app { max-width: 780px; }
+  #main > .card { touch-action: none; }   /* the browser must not steal diagonal swipes as scrolls; JS scrolls vertical drags itself */
   #main > .card .word { font-size: 3.7rem; padding-block: 26px 10px; }
   #main > .card .word.long { font-size: 2.6rem; }
   .rate { gap: 12px; margin-top: 16px; }
@@ -1085,14 +1086,15 @@ document.addEventListener("pointerdown", (e) => {
   if (e.pointerType !== "touch" || swipeBusy || ui.view !== "practice" || pos >= queue.length) return;
   const card = e.target.closest && e.target.closest("#main > .card");
   if (!card || e.target.closest("textarea, input, select, .note-img, .assoc, .hint-box")) return;
-  drag = { card, id: e.pointerId, x0: e.clientX, y0: e.clientY, y: e.clientY, axis: null, dx: 0, dy: 0, v: 0, t: e.timeStamp };
+  drag = { card, free: getComputedStyle(card).touchAction === "none", id: e.pointerId, x0: e.clientX, y0: e.clientY, y: e.clientY, axis: null, dx: 0, dy: 0, v: 0, t: e.timeStamp };
 });
 document.addEventListener("pointermove", (e) => {
   const d = drag; if (!d || e.pointerId !== d.id) return;
   const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
   if (!d.axis) {
     if (Math.hypot(dx, dy) < 10) return;
-    d.axis = Math.abs(dx) > Math.abs(dy) ? "x" : null;   // vertical = normal page scroll
+    // tablets (card touch-action: none) accept diagonal swipes up to ~60deg and scroll the page by hand otherwise
+    d.axis = Math.abs(dx) > Math.abs(dy) * (d.free ? 0.6 : 1) ? "x" : d.free ? "scroll" : null;   // vertical = normal page scroll
     if (!d.axis) { drag = null; return; }
     if (d.axis !== "scroll") {
       d.card.classList.add("dragging");
@@ -1105,7 +1107,7 @@ document.addEventListener("pointermove", (e) => {
   d.v = (along - (d.axis === "x" ? d.dx : d.dy)) / dt; d.t = e.timeStamp;
   d.dx = d.axis === "x" ? dx : dx * 0.2;
   d.dy = dy * 0.2;
-  const s = dragTarget(d), thr = d.axis === "x" ? d.card.offsetWidth * 0.3 : 90;
+  const s = dragTarget(d), thr = d.axis === "x" ? Math.min(d.card.offsetWidth * 0.3, 110) : 90;
   d.card.style.transform = `translate(${d.dx}px, ${d.dy}px) rotate(${d.dx * 0.05}deg)`;   // only the card follows the finger, tilting
   const stamp = d.card.querySelector(".swipe-stamp");
   stamp.dataset.s = s; stamp.textContent = SWIPE_LABEL[s]; stamp.style.opacity = Math.min(1, Math.abs(along) / thr);
@@ -1122,7 +1124,7 @@ function endDrag(e, cancelled) {
   if (d.axis === "scroll") return;
   const card = d.card, W = card.offsetWidth, s = dragTarget(d);
   const along = d.axis === "x" ? Math.abs(d.dx) : d.dy, speed = Math.abs(d.v);
-  const go = !cancelled && (along > (d.axis === "x" ? W * 0.3 : 90) || (speed > 0.5 && along > 30));
+  const go = !cancelled && (along > (d.axis === "x" ? Math.min(W * 0.3, 110) : 90) || (speed > 0.5 && along > 30));
   if (!go) {
     card.classList.remove("dragging"); delete card.dataset.swipe;
     card.style.transition = "transform 280ms cubic-bezier(0.23, 1, 0.32, 1)";
