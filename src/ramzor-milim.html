@@ -116,12 +116,10 @@ body.modal-open { overflow: hidden; }
 .chip[aria-pressed="true"] .check { background: var(--ink); border-color: var(--ink); }
 .chip[aria-pressed="true"] .check::after { content: ""; position: absolute; inset: 1px 3px 3px; border: solid var(--surface); border-width: 0 2px 2px 0; transform: rotate(45deg); }
 
-/* phone: the header scrolls away with the page, except the colour chips, which stay pinned at the top */
-@media (max-width: 560px) {
-  header { top: calc(env(safe-area-inset-top, 0px) + var(--hdr-peek, 0px)); }
-  header > .bar { order: 1; height: 4px; margin-top: -4px; }   /* thin progress line under the chips, pinned with them */
-  #main { min-height: calc(100dvh - 80px); }   /* room to scroll the card up under the chips, even on short pages */
-}
+/* all screens: the header scrolls away with the page, except the colour chips, which stay pinned at the top */
+header { top: calc(env(safe-area-inset-top, 0px) + var(--hdr-peek, 0px)); }
+header > .bar { order: 1; height: 4px; margin-top: -4px; }   /* thin progress line under the chips, pinned with them */
+#main { min-height: calc(100dvh - 80px); }   /* room to scroll the card up under the chips, even on short pages */
 /* phone: the association box hint is smaller and gets room for two full lines instead of being cut off */
 @media (max-width: 560px) {
   .assoc .composer textarea { min-height: 58px; }
@@ -1153,7 +1151,7 @@ document.addEventListener("click", (e) => { if (eatClick && e.timeStamp - eatCli
   const place = () => { const to = mq.matches ? top : home; if (btn.parentElement !== to) to.appendChild(btn); };
   place(); mq.addEventListener("change", place);
 })();
-/* phone: the sticky header is pulled up by its own height minus the chips row, so only the chips stay pinned */
+/* the sticky header is pulled up by its own height minus the chips row, so only the chips stay pinned */
 (() => {
   const hdr = document.querySelector("header"), chips = document.getElementById("chips");
   const setPeek = () => hdr.style.setProperty("--hdr-peek", -(chips.hidden ? hdr.offsetHeight : chips.offsetTop - 6) + "px");
