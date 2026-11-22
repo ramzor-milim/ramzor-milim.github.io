@@ -127,6 +127,7 @@ body.modal-open { overflow: hidden; }
 /* phone: the header scrolls away with the page, except the colour chips, which stay pinned at the top */
 @media (max-width: 560px) {
   header { top: calc(env(safe-area-inset-top, 0px) + var(--hdr-peek, 0px)); }
+  header > .bar { order: 1; height: 4px; margin-top: -4px; }   /* thin progress line under the chips, pinned with them */
   #main { min-height: calc(100dvh - 80px); }   /* room to scroll the card up under the chips, even on short pages */
 }
 /* phone: colour chips at about half the height (smaller number, one-line label) */
