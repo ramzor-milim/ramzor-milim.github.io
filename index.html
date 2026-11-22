@@ -124,14 +124,12 @@ body.modal-open { overflow: hidden; }
 .chip[aria-pressed="true"] .check { background: var(--ink); border-color: var(--ink); }
 .chip[aria-pressed="true"] .check::after { content: ""; position: absolute; inset: 1px 3px 3px; border: solid var(--surface); border-width: 0 2px 2px 0; transform: rotate(45deg); }
 
-/* phone: the header scrolls away with the page; a scroll up brings it back pinned to the top */
+/* phone: the header scrolls up until only the colour chips are left pinned; a scroll up brings the whole header back */
 @media (max-width: 560px) {
-  header { position: relative; top: auto; }
-  header.hdr-pin { position: sticky; top: env(safe-area-inset-top, 0px); animation: hdr-in 250ms var(--ease-out); box-shadow: 0 6px 16px rgb(0 0 0 / .08); }
-  header.hdr-pin.hdr-out { transform: translateY(calc(-100% - env(safe-area-inset-top, 0px))); transition: transform 200ms ease-in; }
-  #main { min-height: 100dvh; }   /* room to scroll the card up to the top of the screen */
+  header { top: calc(env(safe-area-inset-top, 0px) + var(--hdr-peek, 0px)); transition: top 250ms var(--ease-out); }
+  header.hdr-pin { top: env(safe-area-inset-top, 0px); }
+  #main { min-height: 100dvh; }   /* room to scroll the card up under the chips */
 }
-@keyframes hdr-in { from { transform: translateY(-100%); } }
 /* phone: colour chips at about half the height (smaller number, one-line label) */
 @media (max-width: 560px) {
   .chip { padding: 3px 4px; }
@@ -1172,24 +1170,19 @@ document.addEventListener("pointerup", (e) => endDrag(e, false));
 document.addEventListener("pointercancel", (e) => endDrag(e, true));
 document.addEventListener("click", (e) => { if (eatClick && e.timeStamp - eatClick < 400) { e.stopPropagation(); e.preventDefault(); } eatClick = 0; }, true);
 
-/* phone: the header scrolls away with the page; scrolling up brings it back pinned, scrolling down sends it away */
+/* phone: while scrolling down the header slides up until only the colour chips show; scrolling up shows all of it */
 (() => {
-  const mq = matchMedia("(max-width: 560px)"), hdr = document.querySelector("header");
-  let lastY = scrollY, acc = 0, outTimer = null;
-  const unpin = () => { clearTimeout(outTimer); hdr.classList.remove("hdr-pin", "hdr-out"); };
+  const mq = matchMedia("(max-width: 560px)"), hdr = document.querySelector("header"), chips = document.getElementById("chips");
+  const setPeek = () => hdr.style.setProperty("--hdr-peek", -(chips.hidden ? hdr.offsetHeight : chips.offsetTop - 6) + "px");
+  setPeek(); new ResizeObserver(setPeek).observe(hdr);
+  let lastY = scrollY, acc = 0;
   addEventListener("scroll", () => {
     const y = scrollY, dy = y - lastY; lastY = y;
-    if (!mq.matches || y <= 0) { unpin(); acc = 0; return; }
+    if (!mq.matches || y <= 0) { hdr.classList.remove("hdr-pin"); acc = 0; return; }
     const pick = document.getElementById("unitPick"), gres = document.getElementById("gres");
     if ((pick && pick.open) || (gres && !gres.hidden) || hdr.contains(document.activeElement)) return;   // keep it while in use
     acc = Math.sign(dy) === Math.sign(acc) ? acc + dy : dy;
-    const pinned = hdr.classList.contains("hdr-pin") && !hdr.classList.contains("hdr-out");
-    if (acc < -12 && !pinned && y > hdr.offsetHeight) {          // scrolling up, header out of view: bring it back
-      clearTimeout(outTimer); hdr.classList.remove("hdr-out"); hdr.classList.add("hdr-pin");
-    } else if (acc > 12 && pinned) {                               // scrolling down: send it away
-      hdr.classList.add("hdr-out");
-      outTimer = setTimeout(unpin, 220);
-    }
+    if (acc < -12) hdr.classList.add("hdr-pin"); else if (acc > 12) hdr.classList.remove("hdr-pin");
   }, { passive: true });
 })();
 
