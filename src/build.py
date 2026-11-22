@@ -63,6 +63,8 @@ dialog .or::before, dialog .or::after { content: ""; flex: 1; border-top: 1px so
 
 dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: default; }
 .fb-link { font-size: .85rem; }
+.top-tools { display: flex; align-items: center; gap: 8px; }
+.fb-top span { background: var(--green-soft); color: var(--green); font-size: .75rem; }
 .note-meta button.admin-note { color: var(--red); }
 #admDlg { width: min(94vw, 560px); }
 dialog .adm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 45vh; overflow: auto; }
@@ -110,6 +112,13 @@ body_html = body_html.replace(
     '<span class="total" id="total"></span>\n'
     '      <button type="button" class="acct" id="acctBtn" data-in="false" hidden><i></i><span id="acctLabel">התחברות</span></button>\n'
     '    </div>')
+
+# --- "suggestions / report" button next to the language toggle (opens the same window as the footer link) ---
+if firebase_config:
+    _seg = '      <div class="seg-tabs" role="group" aria-label="שפה">'
+    _end = body_html.index('</div>', body_html.index('id="lang-he"')) + len('</div>')
+    assert body_html.count(_seg) == 1
+    body_html = (body_html[:_end] + '</div>' + body_html[_end:]).replace(_seg, '      <div class="top-tools"><button type="button" class="how-link fb-top" id="fbTop"><span aria-hidden="true">💡</span>הצעות ודיווח</button>\n' + _seg, 1)
 
 # --- footer: browser saving + backup/restore ---
 body_html = re.sub(
@@ -488,6 +497,7 @@ const WEB3FORMS_KEY = "__WEB3FORMS_KEY__";   // Web3Forms access key: messages g
   };
   $("fbOpen").addEventListener("click", () => { $("fbErr").textContent = ""; $("fbMsg").textContent = ""; sync(); dlg.showModal(); Nav.open("fb"); });
   $("fbClose").addEventListener("click", () => dlg.close());
+  if ($("fbTop")) $("fbTop").addEventListener("click", () => $("fbOpen").click());
   $("fbLogin").addEventListener("click", () => { dlg.close(); setTimeout(() => $("acctBtn").click(), 50); });
   dlg.addEventListener("change", sync);
   const outside = (e) => { if (e.target !== dlg) return false; const r = dlg.getBoundingClientRect(); return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom; };
