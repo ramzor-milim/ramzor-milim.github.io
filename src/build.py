@@ -63,6 +63,8 @@ dialog .or::before, dialog .or::after { content: ""; flex: 1; border-top: 1px so
 
 dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: default; }
 .fb-link { font-size: .85rem; }
+.gh-link { font-size: .8rem; color: var(--muted); justify-self: center; }
+.gh-link:hover { color: var(--accent); }
 .fb-top span { background: var(--green-soft); color: var(--green); font-size: .75rem; }
 /* phone: login + suggestions share the top row; how it works becomes its ? circle so the suggestions button keeps its words */
 @media (max-width: 560px) {
@@ -141,6 +143,7 @@ body_html = re.sub(
     '<span class="sync" id="sync"><i></i><span id="syncText">ההתקדמות נשמרת בדפדפן הזה</span></span>\n'
     + ('<button type="button" class="link adm-footer" id="admFooter" hidden>⚙️ ניהול האתר</button>\n' if firebase_config else "")
     + ('<button type="button" class="link fb-link" id="fbOpen">הצעות לשיפור / דיווח על בעיה</button>\n' if firebase_config else "")
+    + '<a class="gh-link" href="https://github.com/ramzor-milim/ramzor-milim.github.io" target="_blank" rel="noopener">קוד פתוח ב-GitHub</a>\n'
     + ("" if firebase_config else  # accounts replace backup files
     '    <div class="backup">\n'
     '      <button type="button" id="exportBtn">שמירת גיבוי לקובץ</button>\n'
