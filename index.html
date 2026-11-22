@@ -359,7 +359,9 @@ kbd { font-family: var(--body); font-size: .72rem; border: 1px solid var(--line)
 .assoc h4 { margin: 6px 0 0; font-size: .8rem; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
 .composer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
 .composer textarea { min-height: 44px; }
-.composer button { border: 0; background: var(--accent); color: var(--accent-ink); border-radius: 10px; padding: 10px 16px; font-weight: 700; }
+.composer button { border: 0; background: var(--accent); color: var(--accent-ink); border-radius: 10px; padding: 7px 14px; font-size: .9rem; font-weight: 700; }
+.composer[hidden], .add-assoc[hidden] { display: none; }
+.add-assoc { justify-self: start; font-size: .88rem; padding: 2px 0; }
 .composer button:disabled { opacity: .45; cursor: default; }
 .notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .notes li { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; }
@@ -785,18 +787,20 @@ function assocHTML(w) {
       ? `<ul class="notes">${othersRest.map(([n, i]) => noteHTML(n, "other", i, false)).join("")}</ul>`
       : `<p class="assoc-empty">${othersAll.length ? "אין עוד אסוציאציות של אחרים להציג." : "עוד אין אסוציאציות של אחרים למילה הזו."}</p>`)
     + hiddenHTML;
+  const writing = composerOpen.has(w);   // the writing box stays folded behind a small link until asked for
   return `<div class="assoc" data-w="${esc(w)}">
-    <form class="composer"${Assoc.canImage() ? ` style="grid-template-columns: minmax(0, 1fr) auto auto"` : ""}>
+    ${favItems.length ? `<h4>★ המועדפים שלי</h4><ul class="notes">${favItems.join("")}</ul>` : ""}
+    <h4>האסוציאציות שלי</h4>
+    ${mineHTML}
+    ${note ? `<p class="assoc-note">${note}</p>` : ""}
+    <button type="button" class="link add-assoc"${writing ? " hidden" : ""}>+ הוספת אסוציאציה</button>
+    <form class="composer"${Assoc.canImage() ? ` style="grid-template-columns: minmax(0, 1fr) auto auto"` : ""}${writing ? "" : " hidden"}>
       <textarea rows="1" aria-label="אסוציאציה חדשה" placeholder="${Assoc.canImage() ? "אסוציאציה חדשה, או גררו לכאן תמונה…" : "אסוציאציה חדשה: מילה שנשמעת דומה, תמונה, משפט…"}"></textarea>
       ${Assoc.canImage() ? `<button type="button" class="img-btn" aria-label="הוספת תמונה" title="הוספת תמונה">🖼️</button><input type="file" class="img-input" accept="image/*" hidden>` : ""}
       <button type="submit">שמירה</button>
       <div class="img-preview" hidden></div>
     </form>
     <p class="assoc-msg" role="alert"></p>
-    ${favItems.length ? `<h4>★ המועדפים שלי</h4><ul class="notes">${favItems.join("")}</ul>` : ""}
-    <h4>האסוציאציות שלי</h4>
-    ${mineHTML}
-    ${note ? `<p class="assoc-note">${note}</p>` : ""}
     ${othersHTML}
   </div>`;
 }
@@ -813,11 +817,13 @@ function hintHTML(w) {
     ? `<h4>הרמזים שלי</h4><ul class="notes">${shown.map((n) => `<li><span class="note-text">${esc(n.text || "")}${imgHTML(n.img)}</span></li>`).join("")}</ul>`
     : `<p class="assoc-empty">עוד אין לך אסוציאציות או מועדפים למילה הזו. אחרי הצגת הפירוש אפשר לכתוב אחת, או לסמן בכוכב אסוציאציה של מישהו אחר.</p>`}</div>`;
 }
+const composerOpen = new Set();   // words whose "new association" box is open (this visit only)
 function refreshAssoc(w) {
   if (modalWord === w && !$("wordModal").hidden && !document.querySelector("#wmBox .assoc")) renderWordModal();
   document.querySelectorAll(".assoc").forEach((el) => {
     if (el.dataset.w !== w) return;
     const draft = el.querySelector(".composer textarea").value;
+    if (draft) composerOpen.add(w);   // never fold away something half-written
     const tmp = document.createElement("div");
     tmp.innerHTML = assocHTML(w);
     const fresh = tmp.firstElementChild;
@@ -1701,6 +1707,7 @@ async function submitAssoc(form) {
   btn.disabled = false;
   if (!ok) { box.querySelector(".assoc-msg").textContent = "השמירה לא הצליחה. בדקו את החיבור לאינטרנט ונסו שוב."; return; }
   ta.value = ""; form._img = "";
+  composerOpen.delete(w);   // saved: fold the box back to the small link
   refreshAssoc(w);
 }
 /* images: shrink in the browser to a small JPEG before saving */
@@ -1740,6 +1747,13 @@ async function attachImage(form, file) {
 }
 document.addEventListener("click", (e) => {
   const t = e.target;
+  if (t.classList && t.classList.contains("add-assoc")) {
+    const box = t.closest(".assoc"); composerOpen.add(box.dataset.w);
+    t.hidden = true; const f = box.querySelector(".composer"); f.hidden = false;
+    if (!calmMotion()) f.animate([{ opacity: 0, transform: "translateY(-4px)" }, { opacity: 1, transform: "none" }], { duration: 180, easing: "cubic-bezier(0.23, 1, 0.32, 1)" });
+    f.querySelector("textarea").focus();
+    return;
+  }
   if (t.classList && t.classList.contains("img-btn")) { t.closest(".composer").querySelector(".img-input").click(); return; }
   if (t.classList && t.classList.contains("img-remove")) { const f = t.closest(".composer"); f._img = ""; const pv = f.querySelector(".img-preview"); pv.innerHTML = ""; pv.hidden = true; return; }
   if (t.classList && t.classList.contains("note-img") && !t.closest(".img-preview")) { t.classList.toggle("big"); }
