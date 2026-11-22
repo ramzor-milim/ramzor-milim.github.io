@@ -2184,7 +2184,7 @@ function showLocalTip() {
   dlg.addEventListener("close", () => Nav.close("acct"));   // however it closes, drop its "back" step
 }
 /* suggestions / bug reports: signed-in users only, emailed to the site owner via FormSubmit */
-const FEEDBACK_URL = "https://formsubmit.co/ajax/" + String.fromCharCode(...[116, 118, 106, 53, 115, 112, 104, 116, 110, 71, 56, 118, 107, 104, 116, 104, 104, 108, 108, 115].map((c) => c - 7).reverse());   // target kept out of plain text
+const WEB3FORMS_KEY = "d0177881-4491-482a-bbd6-4b688f41f151";   // Web3Forms access key: messages go to the owner's email, which never appears in this page
 {
   const dlg = $("fbDlg");
   const sync = () => {
@@ -2234,7 +2234,9 @@ const FEEDBACK_URL = "https://formsubmit.co/ajax/" + String.fromCharCode(...[116
 }
 /* report another user's association (spam / offensive): signed-in only, emailed like feedback, and hidden for the reporter */
 async function sendOwnerMail(body) {
-  const r = await fetch(FEEDBACK_URL, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(Object.assign({ _template: "table", _captcha: "false" }, body)) });
+  const { _subject, _replyto, _template, _captcha, ...fields } = body;
+  const payload = Object.assign({ access_key: WEB3FORMS_KEY, subject: _subject, from_name: "רמזור מילים" }, _replyto ? { replyto: _replyto } : {}, fields);
+  const r = await fetch("https://api.web3forms.com/submit", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(payload) });
   const d = await r.json().catch(() => ({}));
   if (!r.ok || String(d.success) === "false") throw new Error(d.message || r.status);
 }
