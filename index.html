@@ -1889,7 +1889,7 @@ async function writeLang(lang) {
   if (wBusy[lang]) { wDirty[lang] = true; return; }
   wBusy[lang] = true;
   try {
-    await fb.setDoc(fb.doc(fb.db, "users", account.uid, "progress", lang), { p: state.p[lang], c: state.c[lang], l: (state.l || {})[lang] || {}, g: ui.goals || null, pl: typeof planOut === "function" ? planOut((ui.plans || {})[lang]) : null, nick: account.nick || "", t: Date.now() });
+    await fb.setDoc(fb.doc(fb.db, "users", account.uid, "progress", lang), { p: state.p[lang], c: state.c[lang], l: (state.l || {})[lang] || {}, g: ui.goals || null, pl: typeof planOut === "function" ? planOut((ui.plans || {})[lang]) : null, nick: account.nick || "", sn: myNotes[lang] || {}, t: Date.now() });
     localSyncText();
   } catch (e) { setSync("השמירה במשתמש לא הצליחה כרגע. ההתקדמות שמורה בדפדפן ותישלח שוב בשינוי הבא."); }
   wBusy[lang] = false;
@@ -1987,13 +1987,13 @@ async function startAccounts() {
     const viaPassword = (u.email || "").endsWith("@ramzor-milim.app");
     account = { uid: u.uid, name: viaPassword ? userName(u.email) : (u.displayName || u.email || "משתמש Google") };
     account.baseShare = (viaPassword ? account.name : (u.displayName || "").split(" ")[0]) || "משתמש";
-    account.nick = ""; setShareName();
+    account.nick = ""; setShareName(); myNotes = { en: {}, he: {} };
     renderAccount(); setSync("מסנכרן עם המשתמש…");
     fb.setDoc(fb.doc(fb.db, "members", u.uid), { t: Date.now() }).then(loadCounts).catch(() => {});
     try {
       for (const lang of LANGS) {
         const snap = await fb.getDoc(fb.doc(fb.db, "users", u.uid, "progress", lang));
-        if (snap.exists()) { mergeLang(lang, normLang(snap.data())); takeNick(snap.data()); }
+        if (snap.exists()) { mergeLang(lang, normLang(snap.data())); takeNick(snap.data()); takeMyNotes(lang, snap.data()); }
       }
       if (pendingNick) { account.nick = pendingNick; setShareName(); pendingNick = ""; $("nickNew").value = ""; renderAccount(); }
       lsSet(LS_STATE, state);
@@ -2003,7 +2003,7 @@ async function startAccounts() {
       for (const lang of LANGS) {
         unsubs.push(fb.onSnapshot(fb.doc(fb.db, "users", u.uid, "progress", lang), (snap) => {
           if (snap.metadata.hasPendingWrites || !snap.exists() || writeBusy(lang) || isEditing()) return;
-          takeNick(snap.data());
+          takeNick(snap.data()); takeMyNotes(lang, snap.data());
           const r = normLang(snap.data());
           if (typeof applyRemoteGoals === "function") applyRemoteGoals(lang, r);
           if (JSON.stringify({ p: r.p, c: r.c, l: r.l || {} }) === JSON.stringify({ p: state.p[lang], c: state.c[lang], l: (state.l || {})[lang] || {} })) return;
@@ -2039,6 +2039,25 @@ function takePendingNick() {
   pendingNick = nick;
   return true;
 }
+/* where this account's shared associations are ({lang: {noteId: word}}), kept in the progress docs,
+   so a nickname change can rename all of them at once */
+let myNotes = { en: {}, he: {} };
+function rememberNote(lang, id, w) { if (!account || !lang || !w || (myNotes[lang] || {})[id] === w) return; (myNotes[lang] = myNotes[lang] || {})[id] = w; queueWrite(lang); }
+function forgetNote(lang, id) { if (!account || !lang || !(myNotes[lang] || {})[id]) return; delete myNotes[lang][id]; queueWrite(lang); }
+function takeMyNotes(lang, data) {
+  if (!data || !data.sn || typeof data.sn !== "object") return;
+  myNotes[lang] = Object.assign({}, myNotes[lang] || {}, data.sn);
+}
+async function renameNote(lang, w, id) {
+  try {
+    const ref = fb.doc(notesCol(lang, w), id), snap = await fb.getDoc(ref);
+    if (!snap.exists()) { forgetNote(lang, id); return; }
+    const d = snap.data();
+    if (d.uid !== account.uid || !d.name || d.name === account.shareName) return;   // anonymous ones stay anonymous
+    await fb.updateDoc(ref, { name: account.shareName });
+    const c = (notesCache[ck(w, lang)] || []).find((n) => n.id === id); if (c) c.name = account.shareName;
+  } catch (e) {}
+}
 function setShareName() { if (account) account.shareName = (account.nick || account.baseShare).slice(0, 40); }
 function takeNick(data) {
   if (!account || !data || typeof data.nick !== "string" || data.nick === (account.nick || "")) return;
@@ -2046,6 +2065,7 @@ function takeNick(data) {
 }
 function fixMyNoteNames(lang, w) {
   if (!account) return [];
+  (notesCache[ck(w, lang)] || []).forEach((n) => { if (n.uid === account.uid) rememberNote(lang, n.id, w); });
   const mine = (notesCache[ck(w, lang)] || []).filter((n) => n.uid === account.uid && n.name && n.name !== account.shareName);
   return mine.map((n) => { n.name = account.shareName; return fb.updateDoc(fb.doc(notesCol(lang, w), n.id), { name: n.name }).catch(() => {}); });
 }
@@ -2064,6 +2084,7 @@ document.addEventListener("submit", async (e) => {
     await Promise.all(LANGS.map((lang) => fb.setDoc(fb.doc(fb.db, "users", account.uid, "progress", lang), { nick }, { merge: true })));
     renderAccount();
     const fixes = Object.keys(notesCache).flatMap((k) => { const i = k.indexOf("|"); return fixMyNoteNames(k.slice(0, i), k.slice(i + 1)); });
+    LANGS.forEach((lang) => Object.entries(myNotes[lang] || {}).forEach(([id, w]) => fixes.push(renameNote(lang, w, id))));
     await Promise.all(fixes);
     if (DICT) render();
     msg.textContent = nick ? `נשמר. האסוציאציות שלך יופיעו בשם "${nick}".` : `הכינוי נמחק. האסוציאציות שלך יופיעו בשם "${account.baseShare}".`;
@@ -2182,7 +2203,7 @@ if (FIREBASE_CONFIG) {
         const p = privItem(item);
         const ref = fb.doc(col()); const n = newNote(p.text, p.img);
         await fb.setDoc(ref, n);
-        indexNote(ref.id);
+        indexNote(ref.id, ui.lang, w);
         (notesCache[k] = notesCache[k] || []).unshift({ id: ref.id, ...n });
         setEntry(w, { pa: list });
         return true;
@@ -2191,7 +2212,7 @@ if (FIREBASE_CONFIG) {
       if (!old) return false;
       if (act === "hide") {
         await fb.deleteDoc(fb.doc(col(), id));
-        unindexNote(id);
+        unindexNote(id, ui.lang);
         notesCache[k] = notesCache[k].filter((n) => n.id !== id);
         setEntry(w, { pa: (entry(w).pa || []).concat(old.img ? [{ text: old.text, img: old.img }] : [old.text]) });
         return true;
@@ -2232,7 +2253,7 @@ if (FIREBASE_CONFIG) {
       const ref = fb.doc(notesCol(ui.lang, w));
       const n = newNote(text, img);
       await fb.setDoc(ref, n);
-      indexNote(ref.id);
+      indexNote(ref.id, ui.lang, w);
       (notesCache[ck(w)] = notesCache[ck(w)] || []).unshift({ id: ref.id, ...n });
       return true;
     } catch (e) { return false; }
@@ -2246,7 +2267,7 @@ if (FIREBASE_CONFIG) {
     }
     try {
       await fb.deleteDoc(fb.doc(notesCol(ui.lang, w), id));
-      unindexNote(id);
+      unindexNote(id, ui.lang);
       notesCache[ck(w)] = (notesCache[ck(w)] || []).filter((n) => n.id !== id);
       return true;
     } catch (e) { return false; }
@@ -2260,8 +2281,8 @@ if (FIREBASE_CONFIG) {
   };
 }
 /* public counters: one tiny doc per member and per posted association */
-const indexNote = (id) => fb.setDoc(fb.doc(fb.db, "noteIndex", id), { uid: account.uid, t: Date.now() }).catch(() => {});
-const unindexNote = (id) => fb.deleteDoc(fb.doc(fb.db, "noteIndex", id)).catch(() => {});
+const indexNote = (id, lang, w) => { rememberNote(lang, id, w); return fb.setDoc(fb.doc(fb.db, "noteIndex", id), { uid: account.uid, t: Date.now() }).catch(() => {}); };
+const unindexNote = (id, lang) => { forgetNote(lang, id); return fb.deleteDoc(fb.doc(fb.db, "noteIndex", id)).catch(() => {}); };
 async function loadCounts() {
   try {
     await loadFirebase();
@@ -2285,7 +2306,7 @@ async function migrateLocalAssoc() {
           const ref = fb.doc(notesCol(lang, w));
           const n = newNote(text);
           await fb.setDoc(ref, n);
-          indexNote(ref.id);
+          indexNote(ref.id, lang, w);
           if (notesCache[ck(w, lang)]) notesCache[ck(w, lang)].unshift({ id: ref.id, ...n });
         }
       } catch (err) { break; }
