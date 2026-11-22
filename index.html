@@ -155,7 +155,7 @@ header > .bar { order: 1; height: 4px; margin-top: -4px; }   /* thin progress li
 .focus header, .focus .viewbar, .focus footer { display: none; }
 .focus-assoc-link { display: block; margin: 4px auto 0; }
 .focus .app { padding-block: 0; }
-.focus #main { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; padding-block: 48px 16px; }
+.focus #main { min-height: 100dvh; display: flex; flex-direction: column; justify-content: flex-start; padding-block: max(48px, 9vh) 24px; }   /* top-aligned so opening the associations below doesn't move the card */
 .focus .focus-exit { display: inline-flex; position: fixed; top: 12px; inset-inline-start: 12px; z-index: 6; }
 .viewbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-block: 14px 10px; flex-wrap: wrap; }
 .link { border: 0; background: none; color: var(--accent); font-weight: 600; padding: 4px 2px; text-decoration: underline; text-underline-offset: 3px; }
@@ -377,6 +377,13 @@ kbd { font-family: var(--body); font-size: .72rem; border: 1px solid var(--line)
 .small-link { font-size: .82rem; font-weight: 600; color: var(--muted); padding: 2px; }
 .hint { margin: 0; color: var(--muted); font-style: italic; text-align: center; white-space: pre-wrap; }
 .assoc { display: grid; gap: 8px; }
+/* associations section under the rating buttons (computers and tablets), styled like a comments thread */
+.assoc-section { margin-top: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px 18px; display: grid; gap: 6px; }
+.assoc-section > h3 { margin: 0 0 4px; padding-bottom: 10px; border-bottom: 1px solid var(--line); font-size: 1rem; font-weight: 700; }
+.assoc-section > h3 bdi { font-family: var(--display); }
+.assoc-section .notes { gap: 8px; }
+.assoc-section .notes li { border-radius: 4px 16px 16px 16px; padding: 10px 14px; }
+.assoc-section .hint-box { margin: 0; }
 .assoc h4 { margin: 6px 0 0; font-size: .8rem; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
 .composer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
 .composer textarea { min-height: 44px; }
@@ -1291,6 +1298,13 @@ function renderPractice() {
   const item = queue[pos], w = item.w;
   if (!revealed || w !== shownWord) focusAssocFor = null;   // focus mode: associations fold again on another word or when the meaning is hidden
   shownWord = w;
+  /* associations: inside the card on phones; on wider screens in their own section under the rating buttons, so showing the meaning doesn't push the buttons down */
+  const below = matchMedia("(min-width: 561px)").matches;
+  const folded = revealed && focusOn() && focusAssocFor !== w;
+  const focusLink = !revealed || !focusOn() ? "" : folded ? `<button type="button" class="link small-link focus-assoc-link" id="focusAssocBtn">💭 אסוציאציות</button>`
+    : below ? `<button type="button" class="link small-link focus-assoc-link" id="focusAssocHide">הסתרת האסוציאציות</button>` : "";
+  const assocBlock = folded ? "" : revealed ? assocHTML(w) : hint ? hintHTML(w) : "";
+  const assocIn = !below;
   const favTexts = [...favsOf(w)].filter((k) => !hiddenOf(w).has(k));
   const s = statusOf(w), a = [...new Set(favTexts.concat(Assoc.mine(w).map((n) => n.text)))].join("\n");
   Assoc.prefetch(w);
@@ -1307,7 +1321,7 @@ function renderPractice() {
                ? `<button type="button" class="link small-link" id="hideHintBtn">הסתרת האסוציאציות</button>`
                : `<button type="button" class="link small-link" id="hintBtn">הצגת אסוציאציות (רמז)</button>`}`}
       </div>
-      ${revealed ? (focusOn() && focusAssocFor !== w ? `<button type="button" class="link small-link focus-assoc-link" id="focusAssocBtn">💭 אסוציאציות</button>` : assocHTML(w)) : hint ? hintHTML(w) : ""}
+      ${assocIn ? assocBlock : focusLink}
     </div>
     <div class="rate">
       <button type="button" class="g" data-rate="g" aria-current="${s === "g"}">יודעת<small>ירוק <kbd>1</kbd></small></button>
@@ -1318,7 +1332,8 @@ function renderPractice() {
     <div class="nav">
       <button type="button" id="prevBtn" ${pos === 0 ? "disabled" : ""}>→ הקודמת</button>
       <button type="button" id="nextBtn">דילוג ←</button>
-    </div>`;
+    </div>
+    ${!assocIn && assocBlock ? `<section class="assoc-section" aria-label="אסוציאציות"><h3>💬 ${revealed ? "אסוציאציות" : "רמז מהאסוציאציות"} · <bdi dir="${dirOf()}">${esc(w)}</bdi></h3>${assocBlock}</section>` : ""}`;
   showUndo();   // the undo bar survives every redraw (showing the meaning, a hint, flipping) until the round is rebuilt
 }
 /* ---------- Stats log ---------- */
@@ -1377,7 +1392,8 @@ function showUndo() {
   const last = undoStack[undoStack.length - 1];
   if (!last || ui.view !== "practice") return;
   const more = undoStack.length > 1 ? ` <span class="undo-more">(אפשר לבטל עוד ${undoStack.length - 1})</span>` : "";
-  $("main").insertAdjacentHTML("beforeend", `<div class="undo-bar" role="status">
+  const navEl = $("main").querySelector(":scope > .nav");   // right under the buttons, above the associations section
+  (navEl || $("main")).insertAdjacentHTML(navEl ? "afterend" : "beforeend", `<div class="undo-bar" role="status">
     <span><b dir="auto">${esc(last.w)}</b> סומנה <span class="dot s-${last.s}"></span> ${COLOR_NAME[last.s]}${more}</span>
     <button type="button" id="undoBtn">ביטול <kbd>Ctrl+Z</kbd></button></div>`);
 }
@@ -1938,6 +1954,7 @@ document.addEventListener("click", (e) => {
   if (t.id === "focusExit") { setFocus(false); return; }
   if (t.id === "shuffleBtn") { ui.shuffle = !ui.shuffle; saveUI(); resetView(); return; }
   if (t.id === "revealBtn") { revealed = true; renderPractice(); return; }
+  if (t.id === "focusAssocHide") { focusAssocFor = null; renderPractice(); return; }
   if (t.id === "focusAssocBtn") { focusAssocFor = queue[pos] && queue[pos].w; renderPractice(); return; }
   if (t.id === "hintBtn") { hint = true; renderPractice(); return; }
   if (t.id === "hideHintBtn") { hint = false; renderPractice(); return; }
