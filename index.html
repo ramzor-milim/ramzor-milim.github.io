@@ -124,6 +124,11 @@ body.modal-open { overflow: hidden; }
 .chip[aria-pressed="true"] .check { background: var(--ink); border-color: var(--ink); }
 .chip[aria-pressed="true"] .check::after { content: ""; position: absolute; inset: 1px 3px 3px; border: solid var(--surface); border-width: 0 2px 2px 0; transform: rotate(45deg); }
 
+/* phone: the sticky header slides away while scrolling down and comes back on scroll up */
+@media (max-width: 560px) {
+  header { transition: transform 250ms var(--ease-out); }
+  header.hdr-hide { transform: translateY(calc(-100% - env(safe-area-inset-top, 0px))); }
+}
 /* phone: colour chips at about half the height (smaller number, one-line label) */
 @media (max-width: 560px) {
   .chip { padding: 3px 4px; }
@@ -410,7 +415,6 @@ textarea::placeholder, input::placeholder { color: var(--muted); opacity: .8; }
 .swipe-hint { display: none; margin: 8px 0 0; text-align: center; font-size: .8rem; color: var(--muted); }
 @media (hover: none) and (pointer: coarse) {
   #main > .card { touch-action: pan-y; }
-  #main > .card > .card-top, #main > .card > .word, #main > .card > .reveal { touch-action: none; }
   .swipe-hint { display: block; }
   /* buttons follow the swipe directions: green on the right, red on the left, "not sure" big in the middle */
   .rate { direction: rtl; grid-template-columns: 1fr 1.6fr 1fr; }
@@ -1009,7 +1013,7 @@ function renderPractice() {
       <button type="button" class="o" data-rate="o" aria-current="${s === "o"}">לא בטוחה<small>כתום · 2</small></button>
       <button type="button" class="r" data-rate="r" aria-current="${s === "r"}">לא יודעת<small>אדום · 3</small></button>
     </div>
-    <p class="swipe-hint">הקישו על הכרטיס כדי להפוך אותו · החליקו ימינה: יודעת · שמאלה: לא יודעת · למטה: לא בטוחה</p>
+    <p class="swipe-hint">הקישו על הכרטיס כדי להפוך אותו · החליקו ימינה: יודעת · שמאלה: לא יודעת</p>
     <div class="nav">
       <button type="button" id="prevBtn" ${pos === 0 ? "disabled" : ""}>→ הקודמת</button>
       <button type="button" id="nextBtn">דילוג ←</button>
@@ -1084,7 +1088,7 @@ function undoRate() {
   renderHeader(); renderPractice(); showUndo();
 }
 
-/* ---------- Phone flashcard: tap to flip, swipe right = green, left = red, down = orange ---------- */
+/* ---------- Phone flashcard: tap to flip, swipe right = green, left = red ("not sure" is the big middle button) ---------- */
 const SWIPE_LABEL = { g: "יודעת ✓", r: "לא יודעת ✗", o: "לא בטוחה ?" };
 const calmMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 let drag = null, swipeBusy = false, eatClick = 0;
@@ -1099,7 +1103,7 @@ function flipCard(card) {
 }
 function dragTarget(d) {
   if (d.axis === "x") return d.dx > 0 ? "g" : "r";
-  return d.axis === "down" ? "o" : null;
+  return null;
 }
 document.addEventListener("pointerdown", (e) => {
   if (e.pointerType !== "touch" || swipeBusy || ui.view !== "practice" || pos >= queue.length) return;
@@ -1112,8 +1116,7 @@ document.addEventListener("pointermove", (e) => {
   const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
   if (!d.axis) {
     if (Math.hypot(dx, dy) < 10) return;
-    const inTop = !!e.target.closest(".card-top, .word, .reveal");
-    d.axis = Math.abs(dx) > Math.abs(dy) ? "x" : dy > 0 && inTop ? "down" : inTop ? "scroll" : null;
+    d.axis = Math.abs(dx) > Math.abs(dy) ? "x" : null;   // vertical = normal page scroll
     if (!d.axis) { drag = null; return; }
     if (d.axis !== "scroll") {
       d.card.classList.add("dragging");
@@ -1125,7 +1128,7 @@ document.addEventListener("pointermove", (e) => {
   const dt = Math.max(1, e.timeStamp - d.t);
   d.v = (along - (d.axis === "x" ? d.dx : d.dy)) / dt; d.t = e.timeStamp;
   d.dx = d.axis === "x" ? dx : dx * 0.2;
-  d.dy = d.axis === "down" ? Math.max(0, dy) : dy * 0.2;
+  d.dy = dy * 0.2;
   const s = dragTarget(d), thr = d.axis === "x" ? d.card.offsetWidth * 0.3 : 90;
   d.card.style.transform = `translate(${d.dx}px, ${d.dy}px) rotate(${d.dx * 0.05}deg)`;
   const stamp = d.card.querySelector(".swipe-stamp");
@@ -1156,7 +1159,7 @@ function endDrag(e, cancelled) {
   if (calmMotion()) return finish();
   swipeBusy = true;
   const toX = d.axis === "x" ? Math.sign(d.dx) * (window.innerWidth + W) * 0.8 : d.dx;
-  const toY = d.axis === "down" ? window.innerHeight * 0.7 : d.dy;
+  const toY = d.dy;
   card.style.transition = "transform 220ms ease-out, opacity 220ms ease-out";
   card.style.transform = `translate(${toX}px, ${toY}px) rotate(${(toX * 0.04).toFixed(1)}deg)`;
   card.style.opacity = "0";
@@ -1165,6 +1168,20 @@ function endDrag(e, cancelled) {
 document.addEventListener("pointerup", (e) => endDrag(e, false));
 document.addEventListener("pointercancel", (e) => endDrag(e, true));
 document.addEventListener("click", (e) => { if (eatClick && e.timeStamp - eatClick < 400) { e.stopPropagation(); e.preventDefault(); } eatClick = 0; }, true);
+
+/* phone: hide the header while scrolling down, show it again on scroll up */
+(() => {
+  const mq = matchMedia("(max-width: 560px)"), hdr = document.querySelector("header");
+  let lastY = scrollY, acc = 0;
+  addEventListener("scroll", () => {
+    const y = scrollY, dy = y - lastY; lastY = y;
+    if (!mq.matches || y < hdr.offsetHeight) { hdr.classList.remove("hdr-hide"); acc = 0; return; }
+    const pick = document.getElementById("unitPick"), gres = document.getElementById("gres");
+    if ((pick && pick.open) || (gres && !gres.hidden) || hdr.contains(document.activeElement)) return;   // keep it while in use
+    acc = Math.sign(dy) === Math.sign(acc) ? acc + dy : dy;
+    if (acc > 12) hdr.classList.add("hdr-hide"); else if (acc < -12) hdr.classList.remove("hdr-hide");
+  }, { passive: true });
+})();
 
 /* ---------- List ---------- */
 function rowHTML(x, i) {
