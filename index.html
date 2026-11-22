@@ -1882,7 +1882,11 @@ const LANGS = ["en", "he"];
 function setSync(t) { $("syncText").textContent = t; }
 function localSyncText() { setSync(account ? `ההתקדמות נשמרת במשתמש ${account.name}` : "ההתקדמות נשמרת בדפדפן הזה"); }
 function save(lang) { lsSet(LS_STATE, state); if (account) (lang ? [lang] : LANGS).forEach(queueWrite); }
-function queueWrite(lang) { clearTimeout(wTimers[lang]); wTimers[lang] = setTimeout(() => writeLang(lang), 800); }
+/* cloud saves are batched: at most one write per language every 10s (Firestore free plan counts writes), plus a flush when the page is hidden/closed or on sign-out */
+function queueWrite(lang) { if (!wTimers[lang]) wTimers[lang] = setTimeout(() => writeLang(lang), 10000); }
+function flushWrites() { return Promise.all(LANGS.filter((l) => wTimers[l]).map((l) => { clearTimeout(wTimers[l]); return writeLang(l); })); }
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushWrites(); });
+addEventListener("pagehide", () => { flushWrites(); });
 async function writeLang(lang) {
   wTimers[lang] = null;
   if (!account) return;
@@ -2117,7 +2121,7 @@ document.addEventListener("click", async (e) => {
     }
     btn.disabled = false;
   }
-  if (id === "logoutBtn") { await fb.signOut(fb.auth); $("acctDlg").close(); }
+  if (id === "logoutBtn") { await flushWrites().catch(() => {}); await fb.signOut(fb.auth); $("acctDlg").close(); }
 });
 document.addEventListener("submit", async (e) => {
   if (e.target.id !== "acctForm") return;
