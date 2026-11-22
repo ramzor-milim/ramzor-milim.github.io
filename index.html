@@ -153,6 +153,7 @@ header > .bar { order: 1; height: 4px; margin-top: -4px; }   /* thin progress li
 .focus-exit { display: none; }
 @media (max-width: 560px) { #focusBtn { display: none; } }
 .focus header, .focus .viewbar, .focus footer { display: none; }
+.focus-assoc-link { display: block; margin: 4px auto 0; }
 .focus .app { padding-block: 0; }
 .focus #main { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; padding-block: 48px 16px; }
 .focus .focus-exit { display: inline-flex; position: fixed; top: 12px; inset-inline-start: 12px; z-index: 6; }
@@ -871,6 +872,7 @@ let undoStack = [];   // [{w, prev, s, pos}], most recent last; cleared when the
 
 const $ = (id) => document.getElementById(id);
 /* focus mode: remembered in this browser; only on screens wider than a phone and only on the practice view */
+let focusAssocFor = null, shownWord = null;   // focus mode: the word whose associations were opened (folded again on the next word)
 let focusMode = (() => { try { return localStorage.getItem("ramzor-focus") === "true"; } catch (e) { return false; } })();
 const focusOn = () => focusMode && ui.view === "practice" && matchMedia("(min-width: 561px)").matches;
 function setFocus(on) { focusMode = on; lsSet("ramzor-focus", on); render(); window.scrollTo(0, 0); }
@@ -1287,6 +1289,8 @@ function renderPractice() {
     return;
   }
   const item = queue[pos], w = item.w;
+  if (!revealed || w !== shownWord) focusAssocFor = null;   // focus mode: associations fold again on another word or when the meaning is hidden
+  shownWord = w;
   const favTexts = [...favsOf(w)].filter((k) => !hiddenOf(w).has(k));
   const s = statusOf(w), a = [...new Set(favTexts.concat(Assoc.mine(w).map((n) => n.text)))].join("\n");
   Assoc.prefetch(w);
@@ -1303,7 +1307,7 @@ function renderPractice() {
                ? `<button type="button" class="link small-link" id="hideHintBtn">הסתרת האסוציאציות</button>`
                : `<button type="button" class="link small-link" id="hintBtn">הצגת אסוציאציות (רמז)</button>`}`}
       </div>
-      ${revealed ? assocHTML(w) : hint ? hintHTML(w) : ""}
+      ${revealed ? (focusOn() && focusAssocFor !== w ? `<button type="button" class="link small-link focus-assoc-link" id="focusAssocBtn">💭 אסוציאציות</button>` : assocHTML(w)) : hint ? hintHTML(w) : ""}
     </div>
     <div class="rate">
       <button type="button" class="g" data-rate="g" aria-current="${s === "g"}">יודעת<small>ירוק <kbd>1</kbd></small></button>
@@ -1934,6 +1938,7 @@ document.addEventListener("click", (e) => {
   if (t.id === "focusExit") { setFocus(false); return; }
   if (t.id === "shuffleBtn") { ui.shuffle = !ui.shuffle; saveUI(); resetView(); return; }
   if (t.id === "revealBtn") { revealed = true; renderPractice(); return; }
+  if (t.id === "focusAssocBtn") { focusAssocFor = queue[pos] && queue[pos].w; renderPractice(); return; }
   if (t.id === "hintBtn") { hint = true; renderPractice(); return; }
   if (t.id === "hideHintBtn") { hint = false; renderPractice(); return; }
   if (t.id === "hideMeaningBtn") { revealed = false; hint = false; renderPractice(); return; }
