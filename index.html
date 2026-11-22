@@ -543,7 +543,15 @@ dialog .adm-list li { border: 1px solid var(--line); border-radius: 10px; paddin
 dialog .adm-list .adm-top { display: flex; justify-content: space-between; gap: 8px; font-size: .8rem; color: var(--muted); }
 dialog .adm-list .adm-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .92rem; }
 dialog .adm-list button, dialog .adm-danger { color: var(--red); }
+dialog .adm-list button { border: 0; background: none; padding: 4px 2px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 dialog .adm-status { font-weight: 700; margin: 0; }
+dialog .adm-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+dialog .adm-tabs button { border: 1px solid var(--line); background: var(--bg); border-radius: 99px; padding: 5px 12px; font-weight: 600; font-size: .85rem; color: var(--ink); }
+dialog .adm-tabs button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+dialog .adm-list li.adm-user { cursor: pointer; }
+dialog .adm-list .adm-user-row { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+dialog .adm-list .adm-user-row button { color: var(--accent); }
+.adm-footer { font-size: .85rem; color: var(--red); }
 dialog .adm-status[data-banned="true"] { color: var(--red); }
 dialog .adm-uid { font-family: monospace; font-size: .78rem; color: var(--muted); overflow-wrap: anywhere; margin: 0; }
 .note-meta button.report-note { color: var(--muted); }
@@ -598,6 +606,7 @@ dialog .fb-kind label:has(input:checked) { border-color: var(--accent); backgrou
   <footer>
     <span class="site-counts" id="siteCounts" hidden></span>
 <span class="sync" id="sync"><i></i><span id="syncText">ההתקדמות נשמרת בדפדפן הזה</span></span>
+<button type="button" class="link adm-footer" id="admFooter" hidden>⚙️ ניהול האתר</button>
 <button type="button" class="link fb-link" id="fbOpen">הצעות לשיפור / דיווח על בעיה</button>
 
     <span>המילים: מילוני עברית ואנגלית של קורס "הפסיכומטרי של המדינה" בקמפוס IL.</span>
@@ -675,7 +684,7 @@ dialog .fb-kind label:has(input:checked) { border-color: var(--accent); backgrou
         <p class="note nick-ok" id="mergeMsg" role="status"></p>
       </div>
     </div>
-    <div class="merge" id="admEntry" hidden><button type="button" class="link" id="admOpenList">ניהול: משתמשים חסומים</button></div>
+    <div class="merge" id="admEntry" hidden><button type="button" class="link" id="admOpenList">⚙️ ניהול האתר</button></div>
     <div class="btns"><button type="button" class="secondary" id="logoutBtn">יציאה מהמשתמש</button></div>
   </div>
   <button type="button" class="link" id="acctClose">סגירה</button>
@@ -2135,6 +2144,7 @@ function renderAccount() {
   $("acctOut").hidden = !!account;
   $("acctIn").hidden = !account;
   if ($("admEntry")) $("admEntry").hidden = !isAdminNow();
+  if ($("admFooter")) $("admFooter").hidden = !isAdminNow();
   if ($("fbOut")) { $("fbOut").hidden = !!account; $("fbForm").hidden = !account; }
   if (account) {
     $("acctName").textContent = account.name;
@@ -2323,7 +2333,7 @@ async function sendOwnerMail(body) {
 /* admin (site owner only; Firestore rules enforce it): see all associations of a user, delete them, ban / unban */
 const ADMIN_UID = "0Nr9yU1s9PbYWfDvRRYHWjMF1H42";
 function isAdminNow() { return !!account && account.uid === ADMIN_UID; }
-let admUser = null, admNotes = null, admBan = null, admBans = null;
+let admUser = null, admNotes = null, admBan = null, admBans = null, admMembers = null, admAll = null, admTab = "users";
 const admDate = (t) => t ? new Date(t).toLocaleDateString("he-IL") : "";
 async function adminLoadNotes(uid) {
   let docs;
@@ -2335,11 +2345,24 @@ async function adminLoadNotes(uid) {
 function adminRender() {
   const body = $("admBody");
   if (!admUser) {
-    body.innerHTML = `<h2 tabindex="-1" autofocus>משתמשים חסומים</h2>`
-      + (admBans === null ? `<p class="note">טוען…</p>` : admBans.length
-        ? `<ul class="adm-list">${admBans.map((x) => `<li><span class="adm-top"><b>${esc(x.name || "ללא שם")}</b><span>${admDate(x.t)}</span></span>${x.reason ? `<span class="adm-text">${esc(x.reason)}</span>` : ""}<span class="note-actions"><button type="button" class="link" data-adm-open="${esc(x.id)}">פתיחה</button><button type="button" data-adm-unban="${esc(x.id)}">ביטול חסימה</button></span></li>`).join("")}</ul>`
-        : `<p class="note">אין משתמשים חסומים.</p>`)
-      + `<p class="note">כדי לנהל משתמש: לחצו "ניהול" ליד אסוציאציה שלו, או על הקישור בדיווח שמגיע למייל.</p>`;
+    const loading = admMembers === null || admAll === null || admBans === null;
+    const banned = new Set((admBans || []).map((x) => x.id));
+    const byUser = {};
+    for (const n of admAll || []) (byUser[n.uid] = byUser[n.uid] || []).push(n);
+    const nameOf = (uid) => { const named = (byUser[uid] || []).find((n) => n.name); const ban = (admBans || []).find((x) => x.id === uid); return uid === ADMIN_UID ? "את (מנהלת)" : named ? named.name : ban && ban.name ? ban.name : "ללא שם"; };
+    const users = (admMembers || []).slice().sort((a, b) => (byUser[b.id] || []).length - (byUser[a.id] || []).length || (b.t || 0) - (a.t || 0));
+    const tab = (k, label) => `<button type="button" data-adm-tab="${k}" aria-pressed="${admTab === k}">${label}</button>`;
+    let list = "";
+    if (loading) list = `<p class="note">טוען…</p>`;
+    else if (admTab === "users") list = users.length ? `<ul class="adm-list">${users.map((m) => { const c = (byUser[m.id] || []).length; return `<li class="adm-user" data-adm-open="${esc(m.id)}"><span class="adm-user-row"><b>${esc(nameOf(m.id))}${banned.has(m.id) ? " 🚫" : ""}</b><button type="button" class="link" data-adm-open="${esc(m.id)}">${c ? c + " אסוציאציות" : "אין אסוציאציות"} ←</button></span><span class="adm-top"><span>נכנס/ה לאחרונה: ${admDate(m.t)}</span><span class="adm-uid">${esc(m.id.slice(0, 8))}…</span></span></li>`; }).join("")}</ul>` : `<p class="note">אין משתמשים רשומים.</p>`;
+    else if (admTab === "notes") list = admAll.length ? `<ul class="adm-list">${admAll.slice(0, 200).map((n, i) => `<li><span class="adm-top"><span>${esc(n.w)} · ${n.lang === "he" ? "עברית" : "אנגלית"} · ${esc(n.name || "אנונימי")}</span><span>${admDate(n.t)}</span></span><span class="adm-text">${esc(n.text || "")}${n.img ? " 🖼️" : ""}</span><span class="note-actions"><button type="button" class="link" data-adm-open="${esc(n.uid)}" style="color:var(--accent)">המשתמש</button><button type="button" data-adm-fdel="${i}">מחיקה</button></span></li>`).join("")}</ul>` : `<p class="note">עוד לא פורסמו אסוציאציות.</p>`;
+    else list = admBans.length
+        ? `<ul class="adm-list">${admBans.map((x) => `<li><span class="adm-top"><b>${esc(x.name || "ללא שם")}</b><span>${admDate(x.t)}</span></span>${x.reason ? `<span class="adm-text">${esc(x.reason)}</span>` : ""}<span class="note-actions"><button type="button" class="link" data-adm-open="${esc(x.id)}" style="color:var(--accent)">פתיחה</button><button type="button" data-adm-unban="${esc(x.id)}">ביטול חסימה</button></span></li>`).join("")}</ul>`
+        : `<p class="note">אין משתמשים חסומים.</p>`;
+    body.innerHTML = `<h2 tabindex="-1" autofocus>ניהול האתר</h2>
+      <div class="adm-tabs">${tab("users", `משתמשים${admMembers ? ` (${admMembers.length})` : ""}`)}${tab("notes", `אסוציאציות אחרונות${admAll ? ` (${admAll.length})` : ""}`)}${tab("bans", `חסומים${admBans ? ` (${admBans.length})` : ""}`)}</div>
+      ${list}
+      <p class="note">מוצגות רק אסוציאציות שפורסמו לכולם (כולל אנונימיות). אסוציאציות שמשתמשים הסתירו מכולם נשמרות אצלם בלבד ולא מופיעות כאן.</p>`;
     return;
   }
   const u = admUser, me = u.uid === ADMIN_UID;
@@ -2356,21 +2379,24 @@ function adminRender() {
       ? `<div class="btns"><button type="button" class="secondary" id="admUnban">ביטול החסימה</button></div>`
       : `<label for="admReason">סיבת החסימה (רק את רואה אותה)</label><input id="admReason" maxlength="200" placeholder="למשל: ספאם, קללות">
          <div class="btns"><button type="button" class="primary" id="admBan" style="background:var(--red)">חסימת המשתמש</button><button type="button" class="secondary" id="admBanDel">חסימה + מחיקת כל האסוציאציות</button></div>`}
-    <button type="button" class="link" id="admToList" style="justify-self:start">← משתמשים חסומים</button>`;
+    <button type="button" class="link" id="admToList" style="justify-self:start">← חזרה לניהול האתר</button>`;
 }
 async function adminOpen(uid, name) {
   if (!isAdminNow()) return;
-  admUser = uid ? { uid, name } : null; admNotes = null; admBan = null; admBans = null;
+  admUser = uid ? { uid, name } : null; admNotes = null; admBan = null; admBans = null; admMembers = null; admAll = null;
   $("admErr").textContent = "";
   const d = $("admDlg"); adminRender(); if (!d.open) { d.showModal(); Nav.open("adm"); }
   try {
     if (!uid) {
-      admBans = (await fb.getDocs(fb.collection(fb.db, "bans"))).docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => (b.t || 0) - (a.t || 0));
+      const [mem, all, bans] = await Promise.all([fb.getDocs(fb.collection(fb.db, "members")), fb.getDocs(fb.collectionGroup(fb.db, "notes")), fb.getDocs(fb.collection(fb.db, "bans"))]);
+      admMembers = mem.docs.map((x) => ({ id: x.id, ...x.data() }));
+      admAll = all.docs.map((d) => { const wr = d.ref.parent.parent; return { ...d.data(), id: d.id, ref: d.ref, w: decodeURIComponent(wr.id), lang: wr.parent.parent.id }; }).sort((a, b) => (b.t || 0) - (a.t || 0));
+      admBans = bans.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => (b.t || 0) - (a.t || 0));
     } else {
       const [notes, ban] = await Promise.all([adminLoadNotes(uid), fb.getDoc(fb.doc(fb.db, "bans", uid))]);
       admNotes = notes; admBan = ban.exists() ? ban.data() : null;
     }
-  } catch (e) { $("admErr").textContent = "הטעינה לא הצליחה (" + (e.code || e.message) + ")."; admNotes = admNotes || []; admBans = admBans || []; }
+  } catch (e) { $("admErr").textContent = "הטעינה לא הצליחה (" + (e.code || e.message) + ")."; admNotes = admNotes || []; admBans = admBans || []; admMembers = admMembers || []; admAll = admAll || []; }
   adminRender();
 }
 async function adminDelete(n) {
@@ -2392,10 +2418,13 @@ async function adminBan(withDelete) {
   dlg.addEventListener("close", () => Nav.close("adm"));
   addEventListener("popstate", (e) => { if (dlg.open && (e.state || {}).layer !== "adm") dlg.close(); });
   document.addEventListener("click", async (e) => {
+    const row = e.target.closest && !e.target.closest("button") && e.target.closest("li.adm-user");
+    if (row && isAdminNow()) { adminOpen(row.dataset.admOpen, ""); return; }
     const t = e.target.closest && e.target.closest("button");
     if (!t) return;
     if (t.classList.contains("admin-note")) { adminOpen(t.dataset.uid, t.dataset.name); return; }
     if (t.id === "admOpenList") { $("acctDlg").close(); setTimeout(() => adminOpen(null), 50); return; }
+    if (t.id === "admFooter") { adminOpen(null); return; }
     if (!dlg.contains(t) || !isAdminNow()) return;
     const err = $("admErr"); err.textContent = "";
     const run = async (f, ask) => {
@@ -2405,6 +2434,8 @@ async function adminBan(withDelete) {
       t.disabled = false;
     };
     if (t.id === "admToList") return adminOpen(null);
+    if (t.dataset.admTab) { admTab = t.dataset.admTab; adminRender(); return; }
+    if (t.dataset.admFdel !== undefined) { const n = admAll[+t.dataset.admFdel]; return run(async () => { await adminDelete(n); admAll = admAll.filter((x) => x !== n); adminRender(); }, "למחוק את האסוציאציה הזו?"); }
     if (t.dataset.admOpen) return adminOpen(t.dataset.admOpen, "");
     if (t.dataset.admUnban) return run(async () => { await fb.deleteDoc(fb.doc(fb.db, "bans", t.dataset.admUnban)); admBans = admBans.filter((x) => x.id !== t.dataset.admUnban); adminRender(); }, "לבטל את החסימה?");
     if (t.dataset.admDel !== undefined) { const n = admNotes[+t.dataset.admDel]; return run(async () => { await adminDelete(n); admNotes = admNotes.filter((x) => x !== n); adminRender(); }, "למחוק את האסוציאציה הזו?"); }
