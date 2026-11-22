@@ -505,6 +505,7 @@ dialog .nick { border-top: 1px solid var(--line); padding-top: 10px; margin-top:
 dialog .nick-row { display: flex; gap: 8px; }
 dialog .nick-row input { flex: 1; min-width: 0; }
 dialog .nick-row button { flex: none; }
+dialog .nick-out { border-top: 0; padding-top: 0; margin-top: 0; border-bottom: 1px solid var(--line); padding-bottom: 6px; display: grid; gap: 6px; }
 dialog .nick-ok { color: var(--green); font-weight: 600; min-height: 1.2em; }
 dialog .secondary { border: 1.5px solid var(--accent); background: transparent; color: var(--accent); border-radius: 12px; padding: 9px 16px; font-weight: 700; }
 dialog .google { border: 1px solid var(--line); background: var(--bg); border-radius: 12px; padding: 10px 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
@@ -568,6 +569,12 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
   <div class="pane" id="acctOut">
     <h2 tabindex="-1" autofocus>משתמש</h2>
     <p class="note">עם משתמש, הצבעים והאסוציאציות נשמרים ונטענים בכל מכשיר שמתחברים ממנו.</p>
+    <div class="nick nick-out">
+      <label for="nickNew">כינוי (לא חובה)</label>
+      <p class="note">כך יופיע השם שלך ליד אסוציאציות שתשתפו, במקום השם האמיתי. אפשר גם להוסיף או לשנות אחר כך.</p>
+      <input id="nickNew" maxlength="20" autocomplete="nickname" spellcheck="false">
+      <p class="err" id="nickNewErr" role="alert"></p>
+    </div>
     <button type="button" class="google" id="googleBtn"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>כניסה עם Google</button>
     <p class="err" id="googleErr" role="alert"></p>
     <div class="or">או עם שם משתמש וסיסמה</div>
@@ -1960,6 +1967,7 @@ async function startAccounts() {
         const snap = await fb.getDoc(fb.doc(fb.db, "users", u.uid, "progress", lang));
         if (snap.exists()) { mergeLang(lang, normLang(snap.data())); takeNick(snap.data()); }
       }
+      if (pendingNick) { account.nick = pendingNick; setShareName(); pendingNick = ""; $("nickNew").value = ""; renderAccount(); }
       lsSet(LS_STATE, state);
       await migrateLocalAssoc();
       refreshAfterData();
@@ -1989,6 +1997,19 @@ async function startAccounts() {
   dlg.addEventListener("click", (e) => { if (downOutside && outside(e)) dlg.close(); downOutside = false; });
 }
 /* nickname: optional public name for shared associations, stored with the progress docs */
+let pendingNick = "";
+function nickProblem(nick) {
+  if (nick && nick.length < 2) return "הכינוי צריך להיות לפחות 2 תווים.";
+  if (/[<>@]/.test(nick)) return "הכינוי לא יכול להכיל את התווים < > @.";
+  return "";
+}
+function takePendingNick() {
+  const nick = $("nickNew").value.trim().replace(/\s+/g, " "), bad = nickProblem(nick);
+  $("nickNewErr").textContent = bad;
+  if (bad) return false;
+  pendingNick = nick;
+  return true;
+}
 function setShareName() { if (account) account.shareName = (account.nick || account.baseShare).slice(0, 40); }
 function takeNick(data) {
   if (!account || !data || typeof data.nick !== "string" || data.nick === (account.nick || "")) return;
@@ -2005,8 +2026,7 @@ document.addEventListener("submit", async (e) => {
   if (!account) return;
   const nick = $("nickInput").value.trim().replace(/\s+/g, " "), err = $("nickErr"), msg = $("nickMsg");
   err.textContent = ""; msg.textContent = "";
-  if (nick && nick.length < 2) { err.textContent = "הכינוי צריך להיות לפחות 2 תווים."; return; }
-  if (/[<>@]/.test(nick)) { err.textContent = "הכינוי לא יכול להכיל את התווים < > @."; return; }
+  const bad = nickProblem(nick); if (bad) { err.textContent = bad; return; }
   $("nickSave").disabled = true;
   const prev = account.nick || "";
   account.nick = nick; setShareName();   // set first, so a background progress save can't write back the old one
@@ -2027,10 +2047,11 @@ document.addEventListener("submit", async (e) => {
 
 document.addEventListener("click", async (e) => {
   const id = e.target.closest("button") && e.target.closest("button").id;
-  if (id === "acctBtn") { $("acctErr").textContent = ""; $("googleErr").textContent = ""; $("nickErr").textContent = ""; $("nickMsg").textContent = ""; $("acctDlg").showModal(); }
+  if (id === "acctBtn") { $("acctErr").textContent = ""; $("googleErr").textContent = ""; $("nickErr").textContent = ""; $("nickMsg").textContent = ""; $("nickNewErr").textContent = ""; $("acctDlg").showModal(); }
   if (id === "acctClose") $("acctDlg").close();
   if (id === "googleBtn") {
     const gErr = $("googleErr"); gErr.textContent = "";
+    if (!takePendingNick()) return;
     const btn = $("googleBtn"); btn.disabled = true;
     try { await loadFirebase(); await fb.googlePopup(); $("acctDlg").close(); }
     catch (ex) {
@@ -2042,6 +2063,7 @@ document.addEventListener("click", async (e) => {
         : "הדפדפן חסם את חלון הכניסה. אפשרו חלונות קופצים לאתר הזה ונסו שוב.";
       else if (code === "auth/unauthorized-domain" || code === "auth/operation-not-allowed") gErr.textContent = "הכניסה עם Google עדיין לא הופעלה באתר הזה.";
       else gErr.textContent = AUTH_ERRORS[code] || "הכניסה עם Google לא הצליחה. נסו שוב.";
+      pendingNick = "";
     }
     btn.disabled = false;
   }
@@ -2059,6 +2081,7 @@ document.addEventListener("submit", async (e) => {
   if (!email) { err.textContent = "שם המשתמש ארוך מדי."; return; }
   if (pass.length < 6) { err.textContent = "הסיסמה צריכה להיות לפחות 6 תווים."; return; }
   err.textContent = "";
+  if (!takePendingNick()) return;   // checked last, so it's only held when a sign-in is really sent
   $("loginBtn").disabled = $("signupBtn").disabled = true;
   try {
     await loadFirebase();
@@ -2067,6 +2090,7 @@ document.addEventListener("submit", async (e) => {
     $("acctDlg").close();
   } catch (ex) {
     err.textContent = AUTH_ERRORS[ex && ex.code] || "משהו השתבש. נסו שוב בעוד רגע.";
+    pendingNick = "";
   }
   $("loginBtn").disabled = $("signupBtn").disabled = false;
 });
