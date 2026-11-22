@@ -13,6 +13,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // owner email alerts on/off (read by every visitor's page, changed only by the admin)
+    match /settings/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // login details per user, readable only by the admin
     match /profiles/{uid} {
       allow read: if isAdmin();

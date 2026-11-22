@@ -545,6 +545,10 @@ dialog .adm-list .adm-text { white-space: pre-wrap; overflow-wrap: anywhere; fon
 dialog .adm-list button, dialog .adm-danger { color: var(--red); }
 dialog .adm-list button { border: 0; background: none; padding: 4px 2px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 dialog .adm-status { font-weight: 700; margin: 0; }
+dialog .adm-notify { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin: 0; display: grid; gap: 6px; }
+dialog .adm-notify legend { font-weight: 700; padding: 0 4px; }
+dialog .adm-notify label { display: flex; align-items: center; gap: 8px; font-weight: 400; margin: 0; cursor: pointer; }
+dialog .adm-notify input { width: 18px; height: 18px; flex: none; margin: 0; accent-color: var(--accent); }
 dialog .adm-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
 dialog .adm-tabs button { border: 1px solid var(--line); background: var(--bg); border-radius: 99px; padding: 5px 12px; font-weight: 600; font-size: .85rem; color: var(--ink); }
 dialog .adm-tabs button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
@@ -2171,7 +2175,14 @@ async function startAccounts() {
     account.baseShare = (viaPassword ? account.name : viaEmail ? "" : (u.displayName || "").split(" ")[0]) || "משתמש";   // never show an email address publicly
     account.nick = ""; setShareName(); myNotes = { en: {}, he: {} };
     renderAccount(); setSync("מסנכרן עם המשתמש…");
-    fb.setDoc(fb.doc(fb.db, "members", u.uid), { t: Date.now() }).then(loadCounts).catch(() => {});
+    {
+      const memRef = fb.doc(fb.db, "members", u.uid);
+      const kind = viaPassword ? "שם משתמש" : viaGoogle ? "Google" : "אימייל", login = viaPassword ? userName(u.email) : (u.email || "");
+      fb.getDoc(memRef).then((s) => {   // first sign-in of a new account: no members doc yet and the account was created in the last day
+        if (!s.exists() && Date.now() - Date.parse((u.metadata && u.metadata.creationTime) || 0) < 864e5)
+          notifyOwner("signup", { _subject: `רמזור מילים: משתמש חדש נרשם (${login || "ללא שם"})`, "התחברות": login, "סוג": kind, "שם": u.displayName || pendingNick || "", "ניהול המשתמש": adminLink(u.uid), "זמן": new Date().toLocaleString("he-IL") });
+      }).catch(() => {}).then(() => fb.setDoc(memRef, { t: Date.now() })).then(loadCounts).catch(() => {});
+    }
     fb.setDoc(fb.doc(fb.db, "profiles", u.uid), { login: (viaPassword ? userName(u.email) : (u.email || "")).slice(0, 120), kind: viaPassword ? "username" : viaGoogle ? "google" : "email", name: (u.displayName || "").slice(0, 80), t: Date.now() }).catch(() => {});
     try {
       for (const lang of LANGS) {
@@ -2280,6 +2291,19 @@ async function sendOwnerMail(body) {
   const d = await r.json().catch(() => ({}));
   if (!r.ok || String(d.success) === "false") throw new Error(d.message || r.status);
 }
+/* owner email alerts, switched on/off by the admin in the dashboard (settings/notify: public read, admin write) */
+let notifyCfg = null;
+async function getNotify() {
+  try { const s = await fb.getDoc(fb.doc(fb.db, "settings", "notify")); notifyCfg = s.exists() ? s.data() : {}; } catch (e) { notifyCfg = notifyCfg || {}; }
+  return notifyCfg;
+}
+const adminLink = (uid) => location.origin + location.pathname + "?admin=" + encodeURIComponent(uid);
+async function notifyOwner(kind, body) {
+  try { if (isAdminNow()) return; const c = await getNotify(); if (c[kind]) await sendOwnerMail(body); } catch (e) {}
+}
+function notifyNote(lang, w, n) {
+  notifyOwner("notes", { _subject: `רמזור מילים: אסוציאציה חדשה ל־${w}`, "מילה": w, "שפה": lang === "he" ? "עברית" : "אנגלית", "מאת": n.name || "אנונימי", "אסוציאציה": n.text || "", "תמונה": n.img ? "כן" : "לא", "ניהול המשתמש": adminLink(account.uid), "זמן": new Date().toLocaleString("he-IL") });
+}
 {
   const dlg = $("repDlg");
   let cur = null;   // { w, lang, n }
@@ -2363,6 +2387,9 @@ function adminRender() {
         ? `<ul class="adm-list">${admBans.map((x) => `<li><span class="adm-top"><b>${esc(x.name || "ללא שם")}</b><span>${admDate(x.t)}</span></span>${x.reason ? `<span class="adm-text">${esc(x.reason)}</span>` : ""}<span class="note-actions"><button type="button" class="link" data-adm-open="${esc(x.id)}" style="color:var(--accent)">פתיחה</button><button type="button" data-adm-unban="${esc(x.id)}">ביטול חסימה</button></span></li>`).join("")}</ul>`
         : `<p class="note">אין משתמשים חסומים.</p>`;
     body.innerHTML = `<h2 tabindex="-1" autofocus>ניהול האתר</h2>
+      <fieldset class="adm-notify"><legend>התראות במייל</legend>${notifyCfg === null ? `<span class="note">טוען…</span>` : `
+        <label><input type="checkbox" data-adm-notify="signup"${notifyCfg.signup ? " checked" : ""}>להודיע לי על כל משתמש חדש שנרשם</label>
+        <label><input type="checkbox" data-adm-notify="notes"${notifyCfg.notes ? " checked" : ""}>להודיע לי על כל אסוציאציה חדשה שפורסמה</label>`}</fieldset>
       <div class="adm-tabs">${tab("users", `משתמשים${admMembers ? ` (${admMembers.length})` : ""}`)}${tab("notes", `אסוציאציות אחרונות${admAll ? ` (${admAll.length})` : ""}`)}${tab("bans", `חסומים${admBans ? ` (${admBans.length})` : ""}`)}</div>
       ${list}
       <p class="note">מוצגות רק אסוציאציות שפורסמו לכולם (כולל אנונימיות). אסוציאציות שמשתמשים הסתירו מכולם נשמרות אצלם בלבד ולא מופיעות כאן.</p>`;
@@ -2397,6 +2424,7 @@ async function adminOpen(uid, name) {
       admMembers = mem.docs.map((x) => ({ id: x.id, ...x.data() }));
       admAll = all.docs.map((d) => { const wr = d.ref.parent.parent; return { ...d.data(), id: d.id, ref: d.ref, w: decodeURIComponent(wr.id), lang: wr.parent.parent.id }; }).sort((a, b) => (b.t || 0) - (a.t || 0));
       admBans = bans.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => (b.t || 0) - (a.t || 0));
+      await getNotify();
     } else {
       const [notes, ban, prof] = await Promise.all([adminLoadNotes(uid), fb.getDoc(fb.doc(fb.db, "bans", uid)), fb.getDoc(fb.doc(fb.db, "profiles", uid)).catch(() => null)]);
       if (prof && prof.exists()) admProf[uid] = prof.data();
@@ -2422,6 +2450,15 @@ async function adminBan(withDelete) {
   $("admClose").addEventListener("click", () => dlg.close());
   $("banOk").addEventListener("click", () => $("banDlg").close());
   dlg.addEventListener("close", () => Nav.close("adm"));
+  dlg.addEventListener("change", async (e) => {
+    const cb = e.target.closest && e.target.closest("input[data-adm-notify]");
+    if (!cb || !isAdminNow()) return;
+    const next = { signup: !!(notifyCfg || {}).signup, notes: !!(notifyCfg || {}).notes, [cb.dataset.admNotify]: cb.checked };
+    $("admErr").textContent = ""; cb.disabled = true;
+    try { await fb.setDoc(fb.doc(fb.db, "settings", "notify"), next); notifyCfg = next; }
+    catch (ex) { cb.checked = !cb.checked; $("admErr").textContent = "השמירה לא הצליחה (" + (ex.code || ex.message) + ")."; }
+    cb.disabled = false;
+  });
   addEventListener("popstate", (e) => { if (dlg.open && (e.state || {}).layer !== "adm") dlg.close(); });
   document.addEventListener("click", async (e) => {
     const row = e.target.closest && !e.target.closest("button") && e.target.closest("li.adm-user");
@@ -2787,7 +2824,7 @@ if (FIREBASE_CONFIG) {
         const p = privItem(item);
         const ref = fb.doc(col()); const n = newNote(p.text, p.img);
         await fb.setDoc(ref, n);
-        indexNote(ref.id, ui.lang, w);
+        indexNote(ref.id, ui.lang, w); notifyNote(ui.lang, w, n);
         (notesCache[k] = notesCache[k] || []).unshift({ id: ref.id, ...n });
         setEntry(w, { pa: list });
         return true;
@@ -2837,7 +2874,7 @@ if (FIREBASE_CONFIG) {
       const ref = fb.doc(notesCol(ui.lang, w));
       const n = newNote(text, img);
       await fb.setDoc(ref, n);
-      indexNote(ref.id, ui.lang, w);
+      indexNote(ref.id, ui.lang, w); notifyNote(ui.lang, w, n);
       (notesCache[ck(w)] = notesCache[ck(w)] || []).unshift({ id: ref.id, ...n });
       return true;
     } catch (e) { return false; }
