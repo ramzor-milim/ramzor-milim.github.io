@@ -2246,7 +2246,7 @@ if (FIREBASE_CONFIG) {
   };
   Assoc.note = () => account
     ? `אסוציאציה חדשה גלויה לכולם בשם ${esc(account.shareName)}. לכל אסוציאציה אפשר לבחור להפוך לאנונימית או להסתיר מכולם.`
-    : "בלי משתמש, האסוציאציות שלך נשמרות רק בדפדפן הזה. התחברו כדי לשמור אותן במשתמש ולשתף עם אחרים.";
+    : `בלי משתמש, האסוציאציות שלך נשמרות רק בדפדפן הזה. <button type="button" class="link signup-link">הירשמו בחינם</button> כדי לשמור אותן בכל המכשירים ולשתף עם אחרים.`;
   Assoc.canImage = () => !!account;
   Assoc.othersLocked = () => !account;
   if (typeof Stats !== "undefined") Stats.enabled = () => !!account;   // progress tracking for signed-in users only
