@@ -479,6 +479,21 @@ footer { margin-top: 26px; color: var(--muted); font-size: .82rem; display: grid
   *, *::before, *::after { transition-property: opacity, color, background-color, border-color !important; }
   .unit-menu, .wm-box { @starting-style { transform: none; } }
 }
+/* welcome screen: 2x2 steps, sample card, wider on computers */
+.how-demo { justify-self: center; width: 100%; max-width: 300px; pointer-events: none; user-select: none; }
+.how-demo .card { gap: 10px; padding: 14px 16px 16px; box-shadow: 0 10px 28px rgb(0 0 0 / .07); }
+.how-demo .word { font-size: 2.2rem; padding-block: 10px 0; }
+.how-demo .meaning { font-size: 1.1rem; color: var(--muted); }
+.how-demo .rate { margin-top: 4px; gap: 6px; }
+.how-demo .rate button { padding: 9px 4px; font-size: .9rem; border-radius: 12px; }
+@media (min-width: 561px) { .how-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 900px) {
+  .app:has(.how) { max-width: 920px; }
+  .how { grid-template-columns: minmax(0, 1fr) 300px; column-gap: 48px; }
+  .how > * { grid-column: 1; }
+  .how > .how-demo { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
+  .how > .how-steps, .how > .how-also { grid-column: 1 / -1; }
+}
 </style>
 
 <style>
@@ -1627,6 +1642,18 @@ function renderHow() {
     <span class="how-pill">נבנה בשביל מי שמתכונן לפסיכומטרי</span>
     <h2 id="how-title">כל מילה מקבלת צבע, ולומדים רק את מה שצריך.</h2>
     <p class="how-lead">עוברים פעם אחת על כל המילים ביחידה וממיינים אותן לשלוש ערימות. מילים שכבר מכירים יוצאות מהדרך, וכל השאר מחכות בצבע שנבחר. ככה הזמן הולך על המילים שבאמת צריך ללמוד.</p>
+    <div class="how-demo" aria-hidden="true">
+      <div class="card" data-s="g">
+        <div class="card-top"><span>יחידה 4</span><span class="badge"><span class="dot s-g"></span>ירוק</span></div>
+        <div class="word" dir="ltr">candid</div>
+        <div class="meaning">כנה, ישיר</div>
+        <div class="rate">
+          <button type="button" class="g" tabindex="-1" aria-current="true">יודעת<small>ירוק</small></button>
+          <button type="button" class="o" tabindex="-1">לא בטוחה<small>כתום</small></button>
+          <button type="button" class="r" tabindex="-1">לא יודעת<small>אדום</small></button>
+        </div>
+      </div>
+    </div>
     <ol class="how-steps">
       <li class="how-card">
         <span class="how-num">1</span>
