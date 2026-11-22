@@ -500,6 +500,11 @@ dialog .note { margin: 0; color: var(--muted); font-size: .85rem; }
 dialog .err { margin: 0; color: var(--red); font-size: .88rem; font-weight: 600; min-height: 1.2em; }
 dialog .btns { display: flex; gap: 8px; flex-wrap: wrap; }
 dialog .btns button { flex: 1 1 140px; }
+dialog .nick { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 4px; }
+dialog .nick-row { display: flex; gap: 8px; }
+dialog .nick-row input { flex: 1; min-width: 0; }
+dialog .nick-row button { flex: none; }
+dialog .nick-ok { color: var(--green); font-weight: 600; min-height: 1.2em; }
 dialog .secondary { border: 1.5px solid var(--accent); background: transparent; color: var(--accent); border-radius: 12px; padding: 9px 16px; font-weight: 700; }
 dialog .google { border: 1px solid var(--line); background: var(--bg); border-radius: 12px; padding: 10px 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
 dialog .google svg { width: 18px; height: 18px; flex: none; }
@@ -582,6 +587,13 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
     <h2>משתמש</h2>
     <p>מחובר/ת בתור <b id="acctName"></b></p>
     <p class="note">ההתקדמות נשמרת במשתמש ומסונכרנת בין המכשירים.</p>
+    <form id="nickForm" class="nick" novalidate>
+      <label for="nickInput">כינוי (לא חובה)</label>
+      <p class="note">כך יופיע השם שלך ליד אסוציאציות ששיתפת. אם משאירים ריק, יופיע <b id="nickDefault"></b>.</p>
+      <div class="nick-row"><input id="nickInput" maxlength="20" autocomplete="nickname" spellcheck="false"><button type="submit" class="primary" id="nickSave">שמירה</button></div>
+      <p class="err" id="nickErr" role="alert"></p>
+      <p class="note nick-ok" id="nickMsg" role="status"></p>
+    </form>
     <div class="btns"><button type="button" class="secondary" id="logoutBtn">יציאה מהמשתמש</button></div>
   </div>
   <button type="button" class="link" id="acctClose">סגירה</button>
@@ -1841,7 +1853,7 @@ async function writeLang(lang) {
   if (wBusy[lang]) { wDirty[lang] = true; return; }
   wBusy[lang] = true;
   try {
-    await fb.setDoc(fb.doc(fb.db, "users", account.uid, "progress", lang), { p: state.p[lang], c: state.c[lang], l: (state.l || {})[lang] || {}, g: ui.goals || null, pl: typeof planOut === "function" ? planOut((ui.plans || {})[lang]) : null, t: Date.now() });
+    await fb.setDoc(fb.doc(fb.db, "users", account.uid, "progress", lang), { p: state.p[lang], c: state.c[lang], l: (state.l || {})[lang] || {}, g: ui.goals || null, pl: typeof planOut === "function" ? planOut((ui.plans || {})[lang]) : null, nick: account.nick || "", t: Date.now() });
     localSyncText();
   } catch (e) { setSync("השמירה במשתמש לא הצליחה כרגע. ההתקדמות שמורה בדפדפן ותישלח שוב בשינוי הבא."); }
   wBusy[lang] = false;
@@ -1919,10 +1931,14 @@ function mergeLang(lang, remote) {
 function renderAccount() {
   $("acctBtn").hidden = !FIREBASE_CONFIG;
   $("acctBtn").dataset.in = String(!!account);
-  $("acctLabel").textContent = account ? account.name : "התחברות";
+  $("acctLabel").textContent = account ? (account.nick || account.name) : "התחברות";
   $("acctOut").hidden = !!account;
   $("acctIn").hidden = !account;
-  if (account) $("acctName").textContent = account.name;
+  if (account) {
+    $("acctName").textContent = account.name;
+    $("nickDefault").textContent = account.baseShare;
+    if (document.activeElement !== $("nickInput")) $("nickInput").value = account.nick || "";
+  }
 }
 async function startAccounts() {
   renderAccount();
@@ -1934,13 +1950,14 @@ async function startAccounts() {
     if (!u) { account = null; renderAccount(); localSyncText(); return; }
     const viaPassword = (u.email || "").endsWith("@ramzor-milim.app");
     account = { uid: u.uid, name: viaPassword ? userName(u.email) : (u.displayName || u.email || "משתמש Google") };
-    account.shareName = (viaPassword ? account.name : (u.displayName || "").split(" ")[0]) || "משתמש";
+    account.baseShare = (viaPassword ? account.name : (u.displayName || "").split(" ")[0]) || "משתמש";
+    account.nick = ""; setShareName();
     renderAccount(); setSync("מסנכרן עם המשתמש…");
     fb.setDoc(fb.doc(fb.db, "members", u.uid), { t: Date.now() }).then(loadCounts).catch(() => {});
     try {
       for (const lang of LANGS) {
         const snap = await fb.getDoc(fb.doc(fb.db, "users", u.uid, "progress", lang));
-        if (snap.exists()) mergeLang(lang, normLang(snap.data()));
+        if (snap.exists()) { mergeLang(lang, normLang(snap.data())); takeNick(snap.data()); }
       }
       lsSet(LS_STATE, state);
       await migrateLocalAssoc();
@@ -1949,6 +1966,7 @@ async function startAccounts() {
       for (const lang of LANGS) {
         unsubs.push(fb.onSnapshot(fb.doc(fb.db, "users", u.uid, "progress", lang), (snap) => {
           if (snap.metadata.hasPendingWrites || !snap.exists() || writeBusy(lang) || isEditing()) return;
+          takeNick(snap.data());
           const r = normLang(snap.data());
           if (typeof applyRemoteGoals === "function") applyRemoteGoals(lang, r);
           if (JSON.stringify({ p: r.p, c: r.c, l: r.l || {} }) === JSON.stringify({ p: state.p[lang], c: state.c[lang], l: (state.l || {})[lang] || {} })) return;
@@ -1961,9 +1979,46 @@ async function startAccounts() {
   });
 }
 
+/* nickname: optional public name for shared associations, stored with the progress docs */
+function setShareName() { if (account) account.shareName = (account.nick || account.baseShare).slice(0, 40); }
+function takeNick(data) {
+  if (!account || !data || typeof data.nick !== "string" || data.nick === (account.nick || "")) return;
+  account.nick = data.nick.slice(0, 20); setShareName(); renderAccount();
+}
+function fixMyNoteNames(lang, w) {
+  if (!account) return [];
+  const mine = (notesCache[ck(w, lang)] || []).filter((n) => n.uid === account.uid && n.name && n.name !== account.shareName);
+  return mine.map((n) => { n.name = account.shareName; return fb.updateDoc(fb.doc(notesCol(lang, w), n.id), { name: n.name }).catch(() => {}); });
+}
+document.addEventListener("submit", async (e) => {
+  if (e.target.id !== "nickForm") return;
+  e.preventDefault();
+  if (!account) return;
+  const nick = $("nickInput").value.trim().replace(/\s+/g, " "), err = $("nickErr"), msg = $("nickMsg");
+  err.textContent = ""; msg.textContent = "";
+  if (nick && nick.length < 2) { err.textContent = "הכינוי צריך להיות לפחות 2 תווים."; return; }
+  if (/[<>@]/.test(nick)) { err.textContent = "הכינוי לא יכול להכיל את התווים < > @."; return; }
+  $("nickSave").disabled = true;
+  const prev = account.nick || "";
+  account.nick = nick; setShareName();   // set first, so a background progress save can't write back the old one
+  try {
+    await loadFirebase();
+    await Promise.all(LANGS.map((lang) => fb.setDoc(fb.doc(fb.db, "users", account.uid, "progress", lang), { nick }, { merge: true })));
+    renderAccount();
+    const fixes = Object.keys(notesCache).flatMap((k) => { const i = k.indexOf("|"); return fixMyNoteNames(k.slice(0, i), k.slice(i + 1)); });
+    await Promise.all(fixes);
+    if (DICT) render();
+    msg.textContent = nick ? `נשמר. האסוציאציות שלך יופיעו בשם "${nick}".` : `הכינוי נמחק. האסוציאציות שלך יופיעו בשם "${account.baseShare}".`;
+  } catch (ex) {
+    account.nick = prev; setShareName(); renderAccount();
+    err.textContent = "השמירה לא הצליחה. בדקו את החיבור לאינטרנט ונסו שוב.";
+  }
+  $("nickSave").disabled = false;
+});
+
 document.addEventListener("click", async (e) => {
   const id = e.target.closest("button") && e.target.closest("button").id;
-  if (id === "acctBtn") { $("acctErr").textContent = ""; $("googleErr").textContent = ""; $("acctDlg").showModal(); if (!account) $("acctUser").focus(); }
+  if (id === "acctBtn") { $("acctErr").textContent = ""; $("googleErr").textContent = ""; $("nickErr").textContent = ""; $("nickMsg").textContent = ""; $("acctDlg").showModal(); if (!account) $("acctUser").focus(); }
   if (id === "acctClose") $("acctDlg").close();
   if (id === "googleBtn") {
     const gErr = $("googleErr"); gErr.textContent = "";
@@ -2025,6 +2080,7 @@ async function fetchNotes(lang, w) {
     await loadFirebase();
     const snap = await fb.getDocs(fb.query(notesCol(lang, w), fb.orderBy("t", "desc"), fb.limit(60)));
     notesCache[k] = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    fixMyNoteNames(lang, w);
   } catch (e) { notesCache[k] = []; }
 }
 function afterNotes(w, lang) {
