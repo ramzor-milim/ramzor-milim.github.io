@@ -1621,16 +1621,59 @@ document.addEventListener("click", (e) => {
   }
 });
 document.addEventListener("focusin", (e) => { if (e.target.id === "gq" && e.target.value.trim()) globalSearch(e.target.value); });
-document.addEventListener("toggle", (e) => {
-  const row = e.target;
-  if (!row.classList || !row.classList.contains("row") || !row.open) return;
-  const before = row.getBoundingClientRect().top;
-  document.querySelectorAll("details.row[open]").forEach((r) => { if (r !== row) r.open = false; });   // one word open at a time
-  const shift = row.getBoundingClientRect().top - before;
-  if (shift) window.scrollBy(0, shift);   // keep the tapped word where it was on screen
+function ensureRowBody(row) {
   if (row.querySelector(".row-body")) return;
   const x = listItems[Number(row.dataset.i)]; if (x) row.insertAdjacentHTML("beforeend", rowBodyHTML(x));
+}
+document.addEventListener("toggle", (e) => {
+  const row = e.target;
+  if (row.classList && row.classList.contains("row") && row.open) ensureRowBody(row);
 }, true);
+/* List rows open and close with a short height + fade (200ms, strong ease-out); one word open at a time */
+const ROW_MS = 200;
+function animateRow(row, open) {
+  const body = row.querySelector(".row-body");
+  if (row._anim) { row._anim.cancel(); row._anim = null; }
+  if (!body || calmMotion()) { row.open = open; return; }
+  row.open = true; row._closing = !open;
+  const h = body.offsetHeight;
+  body.style.overflow = "hidden";
+  const a = body.animate(open
+    ? [{ height: "0px", opacity: 0 }, { height: h + "px", opacity: 1 }]
+    : [{ height: h + "px", opacity: 1 }, { height: "0px", opacity: 0 }],
+    { duration: ROW_MS, easing: "cubic-bezier(0.23, 1, 0.32, 1)" });
+  row._anim = a;
+  const done = () => { body.style.overflow = ""; row._anim = null; row._closing = false; };
+  a.onfinish = () => { done(); if (!open) row.open = false; };
+  a.oncancel = done;
+}
+/* while rows above collapse, keep the tapped word fixed under the finger */
+function holdInPlace(row) {
+  const top0 = row.getBoundingClientRect().top; let start = null;
+  const step = (t) => {
+    const d = row.getBoundingClientRect().top - top0;
+    if (d) window.scrollBy(0, d);
+    if (start === null) start = t;
+    if (t - start < ROW_MS + 60) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+document.addEventListener("click", (e) => {
+  const sum = e.target.closest && e.target.closest("details.row > summary");
+  if (!sum || e.target.closest("button")) return;
+  e.preventDefault();
+  const row = sum.parentElement, opening = !row.open || row._closing;
+  if (opening) {
+    const others = [...document.querySelectorAll("details.row[open]")].filter((r) => r !== row && !r._closing);
+    const above = others.some((r) => r.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING);
+    row.open = true; ensureRowBody(row);
+    others.forEach((r) => animateRow(r, false));
+    animateRow(row, true);
+    if (above) holdInPlace(row);
+  } else {
+    animateRow(row, false);
+  }
+});
 document.addEventListener("change", (e) => {
   if (e.target.classList && e.target.classList.contains("unit-cb")) { applyUnitChecks(); return; }
   const gmap = { gExam: ["exam", (v) => v], gPerWeek: ["perWeek", Number], gReview: ["review", Number], gRed: ["red", null], gManual: ["manual", (v) => Math.max(1, Math.min(1000, Number(v) || 1))], gManualPer: ["manualPer", (v) => v] };
