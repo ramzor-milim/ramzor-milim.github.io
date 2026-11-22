@@ -872,7 +872,7 @@ let undoStack = [];   // [{w, prev, s, pos}], most recent last; cleared when the
 
 const $ = (id) => document.getElementById(id);
 /* focus mode: remembered in this browser; only on screens wider than a phone and only on the practice view */
-let focusAssocFor = null;   // focus mode: the word whose associations were opened (folded again on the next word)
+let focusAssocFor = null, shownWord = null;   // focus mode: the word whose associations were opened (folded again on the next word)
 let focusMode = (() => { try { return localStorage.getItem("ramzor-focus") === "true"; } catch (e) { return false; } })();
 const focusOn = () => focusMode && ui.view === "practice" && matchMedia("(min-width: 561px)").matches;
 function setFocus(on) { focusMode = on; lsSet("ramzor-focus", on); render(); window.scrollTo(0, 0); }
@@ -1289,6 +1289,8 @@ function renderPractice() {
     return;
   }
   const item = queue[pos], w = item.w;
+  if (!revealed || w !== shownWord) focusAssocFor = null;   // focus mode: associations fold again on another word or when the meaning is hidden
+  shownWord = w;
   const favTexts = [...favsOf(w)].filter((k) => !hiddenOf(w).has(k));
   const s = statusOf(w), a = [...new Set(favTexts.concat(Assoc.mine(w).map((n) => n.text)))].join("\n");
   Assoc.prefetch(w);
