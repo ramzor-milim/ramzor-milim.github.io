@@ -151,7 +151,12 @@ header > .bar { order: 1; height: 4px; margin-top: -4px; }   /* thin progress li
 /* focus mode (computers and tablets): only the card, its meaning and the rating buttons, centred in the window */
 .viewbar-end { display: flex; align-items: center; gap: 16px; }
 .focus-exit { display: none; }
-@media (max-width: 560px) { #focusBtn { display: none; } }
+/* phone: Focus Mode too - smaller exit button and info pill, card close to the top */
+@media (max-width: 560px) {
+  .focus .focus-exit { top: 8px; inset-inline-start: 8px; font-size: .8rem; padding: 4px 10px; }
+  .focus .focus-info { margin-top: 48px; font-size: .78rem; padding: 5px 12px; gap: 4px 8px; }
+  .focus #main { padding-top: 10px; }
+}
 .focus header, .focus .viewbar, .focus footer { display: none; }
 .focus-assoc-link { display: block; margin: 4px auto 0; }
 .focus .app { padding-block: 0; }
@@ -928,12 +933,11 @@ let queue = [], pos = 0, revealed = false, hint = false, pendingDelete = null, l
 let undoStack = [];   // [{w, prev, s, pos}], most recent last; cleared when the round is rebuilt
 
 const $ = (id) => document.getElementById(id);
-/* focus mode: remembered in this browser; only on screens wider than a phone and only on the practice view */
+/* focus mode: remembered in this browser; only on the practice view (all screen sizes) */
 let focusAssocFor = null, shownWord = null;   // focus mode: the word whose associations were opened (folded again on the next word)
 let focusMode = (() => { try { return localStorage.getItem("ramzor-focus") === "true"; } catch (e) { return false; } })();
-const focusOn = () => focusMode && ui.view === "practice" && matchMedia("(min-width: 561px)").matches;
+const focusOn = () => focusMode && ui.view === "practice";
 function setFocus(on) { focusMode = on; lsSet("ramzor-focus", on); render(); window.scrollTo(0, 0); }
-matchMedia("(min-width: 561px)").addEventListener("change", () => { if (DICT && focusMode) render(); });
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const plain = (s) => s.normalize("NFD").replace(/[֑-ׇ]/g, "").toLowerCase();
 const lsGet = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
