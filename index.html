@@ -2157,7 +2157,7 @@ function showLocalTip() {
   dlg.addEventListener("close", () => Nav.close("acct"));   // however it closes, drop its "back" step
 }
 /* suggestions / bug reports: signed-in users only, emailed to the site owner via FormSubmit */
-const FEEDBACK_URL = "https://formsubmit.co/ajax/leeaamado1@gmail.com";
+const FEEDBACK_URL = "https://formsubmit.co/ajax/" + String.fromCharCode(...[116, 118, 106, 53, 115, 112, 104, 116, 110, 71, 56, 118, 107, 104, 116, 104, 104, 108, 108, 115].map((c) => c - 7).reverse());   // target kept out of plain text
 {
   const dlg = $("fbDlg");
   const sync = () => {
