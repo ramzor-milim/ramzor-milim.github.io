@@ -500,6 +500,7 @@ dialog .note { margin: 0; color: var(--muted); font-size: .85rem; }
 dialog .err { margin: 0; color: var(--red); font-size: .88rem; font-weight: 600; min-height: 1.2em; }
 dialog .btns { display: flex; gap: 8px; flex-wrap: wrap; }
 dialog .btns button { flex: 1 1 140px; }
+dialog h2:focus { outline: none; }
 dialog .nick { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 4px; }
 dialog .nick-row { display: flex; gap: 8px; }
 dialog .nick-row input { flex: 1; min-width: 0; }
@@ -584,7 +585,7 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
     </form>
   </div>
   <div class="pane" id="acctIn" hidden>
-    <h2>משתמש</h2>
+    <h2 tabindex="-1" autofocus>משתמש</h2>
     <p>מחובר/ת בתור <b id="acctName"></b></p>
     <p class="note">ההתקדמות נשמרת במשתמש ומסונכרנת בין המכשירים.</p>
     <form id="nickForm" class="nick" novalidate>
