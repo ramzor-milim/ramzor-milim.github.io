@@ -144,7 +144,8 @@ header > .bar { order: 1; height: 4px; margin-top: -4px; }   /* thin progress li
 .viewbar-end { display: flex; align-items: center; gap: 16px; }
 .focus-exit { display: none; }
 @media (max-width: 560px) { #focusBtn { display: none; } }
-.focus header, .focus .viewbar, .focus footer, .focus #hintBtn, .focus #hideHintBtn { display: none; }
+.focus header, .focus .viewbar, .focus footer { display: none; }
+.focus-assoc-link { display: block; margin: 4px auto 0; }
 .focus .app { padding-block: 0; }
 .focus #main { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; padding-block: 48px 16px; }
 .focus .focus-exit { display: inline-flex; position: fixed; top: 12px; inset-inline-start: 12px; z-index: 6; }
@@ -409,7 +410,10 @@ textarea::placeholder, input::placeholder { color: var(--muted); opacity: .8; }
 .rate button { direction: rtl; }
 .rate button { border: 1.5px solid; border-radius: 14px; padding: 12px 6px; font-weight: 700; display: grid; justify-items: center; gap: 2px; transition: transform 140ms var(--ease-out); }
 .rate button:active { transform: scale(.97); }
-.rate small { font-weight: 400; font-size: .72rem; opacity: .8; }
+.rate small { font-weight: 400; font-size: .72rem; opacity: .85; display: inline-flex; align-items: center; gap: 6px; }
+.rate kbd { color: inherit; border-color: currentColor; font-weight: 700; font-size: .78rem; padding: 0 6px; background: var(--surface); }
+.btn-reveal kbd { font-size: .78rem; padding: 1px 7px; }
+@media (hover: none) { .rate kbd, .btn-reveal kbd { display: none; } }   /* keyboard shortcuts only mean something with a keyboard */
 .rate .r { border-color: var(--red); background: var(--red-soft); color: var(--red); }
 .rate .o { border-color: var(--orange); background: var(--orange-soft); color: var(--orange); }
 .rate .g { border-color: var(--green); background: var(--green-soft); color: var(--green); }
@@ -462,6 +466,39 @@ textarea::placeholder, input::placeholder { color: var(--muted); opacity: .8; }
   .rate { gap: 12px; }
   .rate button { padding: 16px 8px; font-size: 1.15rem; border-radius: 16px; }
   .rate small { font-size: .78rem; }
+}
+/* big computer screens: a real desktop layout - full-width top bar, a sidebar (units, search, colours, progress) and the practice area beside it */
+@media (hover: hover) and (pointer: fine) and (min-width: 1100px) {
+  .app { max-width: 1240px; overflow-x: visible; display: grid; grid-template-columns: 320px minmax(0, 1fr); column-gap: 36px;
+    grid-template-rows: auto auto auto auto auto auto 1fr auto; align-items: start; }
+  .app > header { display: contents; }
+  .app [hidden] { display: none !important; }
+  .app > header > .brand { grid-row: 1; grid-column: 1 / -1; padding-block: 14px;
+    background: var(--surface); box-shadow: 0 0 0 100vmax var(--surface), 0 1px 0 100vmax var(--line); clip-path: inset(0 -100vmax -1px -100vmax); }
+  .app > header > .scope { grid-row: 2; grid-column: 1; flex-wrap: wrap; row-gap: 8px; margin-top: 28px; }
+  .app > header > .gsearch { grid-row: 1; grid-column: 1 / -1; justify-self: end; align-self: center; width: 360px; margin-inline-end: 175px; z-index: 2; }   /* search in the top bar, next to the language toggle */
+  .app > header > .chips { grid-row: 3 / 5; grid-column: 1; grid-template-columns: 1fr; gap: 8px; margin-top: 18px; }
+  .app > header > .bar { grid-row: 5; grid-column: 1; order: 0; height: 8px; margin-top: 14px; }
+  .app > #resetBar { grid-row: 6; grid-column: 1; margin-top: 14px; }
+  .app > .viewbar { grid-row: 2; grid-column: 2; margin-block: 28px 14px; }
+  .app > main { grid-row: 3 / 8; grid-column: 2; min-height: 0; }
+  .app > footer { grid-row: 8; grid-column: 1 / -1; }
+  /* colour filters as a vertical list: name on the right, number on the left */
+  .chip { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 12px; text-align: start; }
+  .chip .n { order: 2; font-size: 1.2rem; }
+  .chip .l { font-size: .9rem; gap: 6px; color: var(--ink); }
+  .chip .check { width: 12px; height: 12px; }
+  .chip .dot { width: 10px; height: 10px; }
+  /* views without the sidebar (how it works, progress, goals) use the full width */
+  .app:has(.scope[hidden]) > main, .app:has(.scope[hidden]) > .viewbar { grid-column: 1 / -1; }
+  .app:has(.how) { max-width: 1240px; }
+  .focus .app { display: block; max-width: 920px; }   /* focus mode stays as it was: just the centred card */
+  .focus .app > header { display: none; }
+}
+@media (hover: hover) and (pointer: fine) and (min-width: 1100px) and (min-height: 760px) {
+  #main > .card .word { font-size: 4rem; padding-block: 34px 14px; }
+  #main > .card .word.long { font-size: 2.8rem; }
+  .rate button { padding: 18px 8px; font-size: 1.2rem; }
 }
 @media (prefers-reduced-motion: reduce) { #main > .card.card-in { animation: none; } }
 
@@ -596,6 +633,7 @@ let undoStack = [];   // [{w, prev, s, pos}], most recent last; cleared when the
 
 const $ = (id) => document.getElementById(id);
 /* focus mode: remembered in this browser; only on screens wider than a phone and only on the practice view */
+let focusAssocFor = null;   // focus mode: the word whose associations were opened (folded again on the next word)
 let focusMode = (() => { try { return localStorage.getItem("ramzor-focus") === "true"; } catch (e) { return false; } })();
 const focusOn = () => focusMode && ui.view === "practice" && matchMedia("(min-width: 561px)").matches;
 function setFocus(on) { focusMode = on; lsSet("ramzor-focus", on); render(); window.scrollTo(0, 0); }
@@ -684,6 +722,7 @@ function setEntry(w, patch, lang = ui.lang) {
   if (!cur.s || cur.s === "n") delete cur.s;
   if (Object.keys(cur).length) state.p[lang][w] = cur; else delete state.p[lang][w];
   save(lang);
+  if ("s" in patch && !resetBusy) countAfterReset();
 }
 const dirOf = () => (ui.lang === "en" ? "ltr" : "rtl");
 
@@ -1021,17 +1060,17 @@ function renderPractice() {
       <div class="reveal">
         ${revealed ? `<div class="meaning">${meaningHTML(item.m)}</div>
              <button type="button" class="link small-link" id="hideMeaningBtn">הסתרת הפירוש</button>`
-          : `<button type="button" class="btn-reveal" id="revealBtn">הצגת הפירוש <kbd>רווח</kbd></button>
+          : `<button type="button" class="btn-reveal" id="revealBtn">הצגת הפירוש <kbd>Space</kbd></button>
              ${hint
                ? `<button type="button" class="link small-link" id="hideHintBtn">הסתרת האסוציאציות</button>`
                : `<button type="button" class="link small-link" id="hintBtn">הצגת אסוציאציות (רמז)</button>`}`}
       </div>
-      ${revealed ? (focusOn() ? "" : assocHTML(w)) : hint && !focusOn() ? hintHTML(w) : ""}
+      ${revealed ? (focusOn() && focusAssocFor !== w ? `<button type="button" class="link small-link focus-assoc-link" id="focusAssocBtn">💭 אסוציאציות</button>` : assocHTML(w)) : hint ? hintHTML(w) : ""}
     </div>
     <div class="rate">
-      <button type="button" class="g" data-rate="g" aria-current="${s === "g"}">יודעת<small>ירוק · 1</small></button>
-      <button type="button" class="o" data-rate="o" aria-current="${s === "o"}">לא בטוחה<small>כתום · 2</small></button>
-      <button type="button" class="r" data-rate="r" aria-current="${s === "r"}">לא יודעת<small>אדום · 3</small></button>
+      <button type="button" class="g" data-rate="g" aria-current="${s === "g"}">יודעת<small>ירוק <kbd>1</kbd></small></button>
+      <button type="button" class="o" data-rate="o" aria-current="${s === "o"}">לא בטוחה<small>כתום <kbd>2</kbd></small></button>
+      <button type="button" class="r" data-rate="r" aria-current="${s === "r"}">לא יודעת<small>אדום <kbd>3</kbd></small></button>
     </div>
     <p class="swipe-hint">הקישו על הכרטיס כדי להפוך אותו · החליקו ימינה: יודעת · שמאלה: לא יודעת</p>
     <div class="nav">
@@ -1111,11 +1150,17 @@ function undoRate() {
 
 /* reset the selected unit(s): every coloured word back to "new"; the undo is kept (also across reloads) until the bar is closed */
 const LS_RESET = "ramzor-reset-undo";
-let resetUndo = lsGet(LS_RESET);
+let resetUndo = lsGet(LS_RESET), resetBusy = false;
+const RESET_UNDO_ACTIONS = 5;   // after this many colour changes the reset is final and the undo bar goes away
+function countAfterReset() {
+  if (!resetUndo) return;
+  resetUndo.after = (resetUndo.after || 0) + 1;
+  if (resetUndo.after >= RESET_UNDO_ACTIONS) dismissReset(); else lsSet(LS_RESET, resetUndo);
+}
 function resetUnit() {
   const items = words().filter((x) => statusOf(x.w) !== "n").map((x) => ({ w: x.w, s: statusOf(x.w) }));
   if (!items.length) return;
-  for (const it of items) setEntry(it.w, { s: "n" });
+  resetBusy = true; for (const it of items) setEntry(it.w, { s: "n" }); resetBusy = false;
   resetUndo = { lang: ui.lang, label: unitLabelText(selectedUnits()), items };
   lsSet(LS_RESET, resetUndo);
   resetView();
@@ -1130,7 +1175,7 @@ function askReset() {
 $("resetDlg").addEventListener("click", (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });   // tap outside closes
 function undoReset() {
   const r = resetUndo; if (!r) return;
-  for (const it of r.items) if (statusOf(it.w, r.lang) === "n") setEntry(it.w, { s: it.s }, r.lang);   // words rated again since the reset keep their new colour
+  resetBusy = true; for (const it of r.items) if (statusOf(it.w, r.lang) === "n") setEntry(it.w, { s: it.s }, r.lang); resetBusy = false;   // words rated again since the reset keep their new colour
   dismissReset(); resetView();
 }
 function dismissReset() { resetUndo = null; try { localStorage.removeItem(LS_RESET); } catch (e) {} renderResetBar(); }
@@ -1592,7 +1637,7 @@ function renderHow() {
     <div class="how-also">
       <p><b>אסוציאציות.</b> כותבים לכל מילה טריק שעוזר לזכור, ורואים את הטריקים של משתמשים אחרים (למשתמשים רשומים). ♥ למה שעובד, ⭐ למועדפים.</p>
       <p><b>פתחו משתמש.</b> הירשמו בחינם כדי לסנכרן את ההתקדמות בין הטלפון למחשב, לראות את האסוציאציות של אחרים ולשתף את שלכם.${document.getElementById("acctBtn") ? ` <button type="button" class="link signup-link">להרשמה</button>` : ""}</p>
-      <p class="how-keys"><b>קיצורי מקלדת במחשב.</b> <kbd>1</kbd> ירוק · <kbd>2</kbd> כתום · <kbd>3</kbd> אדום · <kbd>רווח</kbd> הצגת הפירוש או הסתרתו · <kbd>←</kbd> <kbd>→</kbd> מעבר בין מילים · <kbd>Ctrl+Z</kbd> ביטול הסימונים האחרונים, צעד אחר צעד · <kbd>S</kbd> השמעת המילה</p>
+      <p class="how-keys"><b>קיצורי מקלדת במחשב.</b> <kbd>1</kbd> ירוק · <kbd>2</kbd> כתום · <kbd>3</kbd> אדום · <kbd>Space</kbd> הצגת הפירוש או הסתרתו · <kbd>←</kbd> <kbd>→</kbd> מעבר בין מילים · <kbd>Ctrl+Z</kbd> ביטול הסימונים האחרונים, צעד אחר צעד · <kbd>S</kbd> השמעת המילה</p>
     </div>
     <button type="button" class="primary how-start" data-view="practice">להתחיל לתרגל</button>
   </section>`;
@@ -1651,6 +1696,7 @@ document.addEventListener("click", (e) => {
   if (t.id === "focusExit") { setFocus(false); return; }
   if (t.id === "shuffleBtn") { ui.shuffle = !ui.shuffle; saveUI(); resetView(); return; }
   if (t.id === "revealBtn") { revealed = true; renderPractice(); return; }
+  if (t.id === "focusAssocBtn") { focusAssocFor = queue[pos] && queue[pos].w; renderPractice(); return; }
   if (t.id === "hintBtn") { hint = true; renderPractice(); return; }
   if (t.id === "hideHintBtn") { hint = false; renderPractice(); return; }
   if (t.id === "hideMeaningBtn") { revealed = false; hint = false; renderPractice(); return; }
