@@ -207,6 +207,12 @@ kbd { font-family: var(--body); font-size: .72rem; border: 1px solid var(--line)
 /* reset the selected unit(s), with an undo bar under the header */
 .reset-link { font-size: .82rem; color: var(--muted); font-weight: 500; white-space: nowrap; }
 .reset-bar .reset-actions { display: inline-flex; align-items: center; gap: 6px; }
+#resetDlg { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--ink); width: min(92vw, 380px); padding: 20px; }
+#resetDlg::backdrop { background: rgb(0 0 0 / .45); }
+#resetDlg h2 { margin: 0 0 6px; font-family: var(--display); font-size: 1.25rem; line-height: 1.35; }
+#resetDlg p { margin: 0 0 14px; color: var(--muted); font-size: .9rem; }
+#resetDlg .btns { display: flex; gap: 8px; }
+#resetDlg .btns button { flex: 1; margin: 0; padding: 9px 14px; }
 .reset-bar .reset-actions .link { border: 0; color: var(--muted); padding: 4px 6px; text-decoration: none; }
 .how-keys kbd { font-size: .8rem; padding: 1px 6px; margin-inline: 2px; }
 @media (hover: none) { .how-keys { display: none; } }
@@ -545,6 +551,11 @@ footer { margin-top: 26px; color: var(--muted); font-size: .82rem; display: grid
     <div class="chips" id="chips" role="group" aria-label="אילו מילים לתרגל"></div>
   </header>
   <div class="undo-bar reset-bar" id="resetBar" role="status" hidden></div>
+  <dialog id="resetDlg" aria-labelledby="resetQ">
+    <h2 id="resetQ"></h2>
+    <p id="resetInfo"></p>
+    <div class="btns"><button type="button" class="danger" id="resetYes">כן, לאפס</button><button type="button" class="more" id="resetNo" autofocus>ביטול</button></div>
+  </dialog>
 
   <div class="viewbar">
     <div class="seg-tabs" role="group" aria-label="תצוגה">
@@ -1109,6 +1120,14 @@ function resetUnit() {
   lsSet(LS_RESET, resetUndo);
   resetView();
 }
+function askReset() {
+  const n = words().filter((x) => statusOf(x.w) !== "n").length;
+  if (!n) return;
+  $("resetQ").textContent = `האם את בטוחה שאת רוצה לאפס את ${unitLabelText(selectedUnits())}?`;
+  $("resetInfo").textContent = `${n} מילים צבועות יחזרו ל"חדשות" (האסוציאציות נשארות). אפשר לבטל את האיפוס אחר כך.`;
+  $("resetDlg").showModal();
+}
+$("resetDlg").addEventListener("click", (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });   // tap outside closes
 function undoReset() {
   const r = resetUndo; if (!r) return;
   for (const it of r.items) if (statusOf(it.w, r.lang) === "n") setEntry(it.w, { s: it.s }, r.lang);   // words rated again since the reset keep their new colour
@@ -1623,7 +1642,9 @@ document.addEventListener("click", (e) => {
   if (t.dataset.lang) { ui.lang = t.dataset.lang; query = ""; saveUI(); resetView(); return; }
   if (t.dataset.view) { ui.view = t.dataset.view; saveUI(); render(); return; }
   if (t.classList.contains("chip")) { ui.filter[t.dataset.s] = !ui.filter[t.dataset.s]; saveUI(); resetView(); return; }
-  if (t.id === "resetBtn") { resetUnit(); return; }
+  if (t.id === "resetBtn") { askReset(); return; }
+  if (t.id === "resetYes") { $("resetDlg").close(); resetUnit(); return; }
+  if (t.id === "resetNo") { $("resetDlg").close(); return; }
   if (t.id === "undoResetBtn") { undoReset(); return; }
   if (t.id === "dismissResetBtn") { dismissReset(); return; }
   if (t.id === "focusBtn") { setFocus(true); return; }
@@ -1878,7 +1899,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.target.closest(".composer") && matchMedia("(hover: hover)").matches) {
     e.preventDefault(); submitAssoc(e.target.closest(".composer")); return;
   }
-  if (!DICT || ui.view !== "practice" || e.target.closest("textarea, input, select") || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (!DICT || ui.view !== "practice" || document.querySelector("dialog[open]") || e.target.closest("textarea, input, select") || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key === " " || e.key === "Enter") { if (e.target.closest("button")) return; e.preventDefault(); if (pos < queue.length) { revealed = !revealed; if (!revealed) hint = false; renderPractice(); } }
   else if ((e.key === "s" || e.key === "S" || e.key === "ד") && pos < queue.length) speakWord(queue[pos].w);
   else if (e.key === "1") rate("g"); else if (e.key === "2") rate("o"); else if (e.key === "3") rate("r");
