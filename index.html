@@ -909,6 +909,7 @@ function openWord(x) {
   renderWordModal();
   $("wordModal").hidden = false;
   document.body.classList.add("modal-open");
+  Nav.open("word");
 }
 function renderWordModal() {
   if (!modalWord) return;
@@ -932,6 +933,7 @@ function renderWordModal() {
 }
 function closeWord() {
   modalWord = null; $("wordModal").hidden = true; document.body.classList.remove("modal-open");
+  Nav.close("word");
 }
 
 /* site-wide search */
@@ -1278,7 +1280,33 @@ function updateRow(rowEl) {
 }
 
 /* ---------- Render ---------- */
-function render() { renderHeader(); ui.view === "practice" ? renderPractice() : ui.view === "how" ? renderHow() : ui.view === "stats" ? renderStats() : ui.view === "goals" ? renderGoals() : renderList(); }
+function render() { renderHeader(); ui.view === "practice" ? renderPractice() : ui.view === "how" ? renderHow() : ui.view === "stats" ? renderStats() : ui.view === "goals" ? renderGoals() : renderList(); Nav.view(); }
+/* The phone's "back" button moves between the site's screens and closes open windows, instead of leaving the site.
+   Each screen change and each open window adds one step to the browser history. Off inside an embedding frame. */
+const Nav = (() => {
+  let on = false; try { on = window.top === window && typeof history.pushState === "function"; } catch (e) {}
+  let quiet = false;   // true while reacting to "back", so closing a window doesn't step back a second time
+  const st = () => history.state || {};
+  const isOpen = (layer) => layer === "word" ? !!modalWord : layer === "acct" ? !!(document.getElementById("acctDlg") || {}).open : false;
+  const api = {
+    init() { if (on) history.replaceState({ rm: 1, view: ui.view }, ""); },
+    view() { if (on && !quiet && st().rm && !st().layer && st().view !== ui.view) history.pushState({ rm: 1, view: ui.view }, ""); },
+    open(layer) { if (on && !quiet && st().layer !== layer) history.pushState({ rm: 1, view: ui.view, layer }, ""); },
+    close(layer) { if (on && !quiet && st().layer === layer) history.back(); }
+  };
+  if (on) addEventListener("popstate", (e) => {
+    const s = e.state || {};
+    if (!s.rm) return;
+    quiet = true;
+    try {
+      if (s.layer !== "word" && modalWord) closeWord();
+      const d = document.getElementById("acctDlg"); if (s.layer !== "acct" && d && d.open) d.close();
+      if (s.layer && !isOpen(s.layer)) history.replaceState({ rm: 1, view: s.view }, "");   // "forward" into a window that is already closed
+      if (s.view && s.view !== ui.view && DICT) { ui.view = s.view; saveUI(); render(); window.scrollTo(0, 0); }
+    } finally { quiet = false; }
+  });
+  return api;
+})();
 const HEB_DAYS = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"];
 function stackBar(cc, total) {
   return `<div class="bar stat-bar">${["g", "o", "r", "n"].map((k) => `<span class="b-${k}" style="width:${total ? (cc[k] / total) * 100 : 0}%"></span>`).join("")}</div>`;
@@ -1995,6 +2023,7 @@ async function startAccounts() {
   let downOutside = false;
   dlg.addEventListener("pointerdown", (e) => { downOutside = outside(e); });
   dlg.addEventListener("click", (e) => { if (downOutside && outside(e)) dlg.close(); downOutside = false; });
+  dlg.addEventListener("close", () => Nav.close("acct"));   // however it closes, drop its "back" step
 }
 /* nickname: optional public name for shared associations, stored with the progress docs */
 let pendingNick = "";
@@ -2047,7 +2076,7 @@ document.addEventListener("submit", async (e) => {
 
 document.addEventListener("click", async (e) => {
   const id = e.target.closest("button") && e.target.closest("button").id;
-  if (id === "acctBtn") { $("acctErr").textContent = ""; $("googleErr").textContent = ""; $("nickErr").textContent = ""; $("nickMsg").textContent = ""; $("nickNewErr").textContent = ""; $("acctDlg").showModal(); }
+  if (id === "acctBtn") { $("acctErr").textContent = ""; $("googleErr").textContent = ""; $("nickErr").textContent = ""; $("nickMsg").textContent = ""; $("nickNewErr").textContent = ""; $("acctDlg").showModal(); Nav.open("acct"); }
   if (id === "acctClose") $("acctDlg").close();
   if (id === "googleBtn") {
     const gErr = $("googleErr"); gErr.textContent = "";
@@ -2317,7 +2346,7 @@ if (savedUI && typeof savedUI === "object") {
   if (typeof savedUI.shuffle === "boolean") ui.shuffle = savedUI.shuffle;
   if ([10, 20, 30, 50].includes(savedUI.goal)) ui.goal = savedUI.goal;
 }
-renderHeader();
+renderHeader(); Nav.init();
 DICT = { en: WORDS.en, he: WORDS.he };
 buildQueue(); render();
 startAccounts();
