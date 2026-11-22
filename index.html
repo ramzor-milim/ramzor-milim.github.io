@@ -571,6 +571,7 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
     <p class="note">כרגע, בלי משתמש, האסוציאציות שלך נשמרות רק בדפדפן הזה. אם תחליפו מכשיר או תנקו את הדפדפן, הן ילכו לאיבוד.</p>
     <p class="note">עם משתמש (בחינם) הן נשמרות בכל המכשירים, ואפשר גם לשתף אותן עם אחרים ולראות אסוציאציות של אחרים. מה שכבר כתבתם יעבור למשתמש אוטומטית.</p>
     <div class="btns"><button type="button" class="primary" id="localTipSignup">הירשמו בחינם</button><button type="button" id="localTipOk">הבנתי</button></div>
+    <p class="note tip-login">כבר יש לך משתמש? <button type="button" class="link" id="localTipLogin">להתחברות</button></p>
   </div>
 </dialog>
 <dialog id="acctDlg" dir="rtl" lang="he">
@@ -596,7 +597,7 @@ dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: defa
         <button type="submit" class="primary" id="loginBtn" value="login">כניסה</button>
         <button type="submit" class="secondary" id="signupBtn" value="signup">יצירת משתמש חדש</button>
       </div>
-      <p class="note">אין אפשרות לשחזר סיסמה שנשכחה, אז כדאי לרשום אותה במקום בטוח.</p>
+      <p class="note">אין אפשרות לשחזר סיסמה שנשכחה, אז כדאי לרשום אותה במקום בטוח, או להירשם עם Google.</p>
     </form>
   </div>
   <div class="pane" id="acctIn" hidden>
@@ -2028,17 +2029,17 @@ async function startAccounts() {
   });
 }
 
-/* one-time tip after the first association saved without an account */
-const LS_LOCALTIP = "ramzor-localtip";
+/* tip after every association saved without an account */
 function showLocalTip() {
-  if (account || lsGet(LS_LOCALTIP)) return;
-  lsSet(LS_LOCALTIP, 1);
+  if (account) return;
   setTimeout(() => { const d = $("localTip"); if (d && !d.open && !account) d.showModal(); }, 250);
 }
 {
   const d = $("localTip");
   $("localTipOk").addEventListener("click", () => d.close());
-  $("localTipSignup").addEventListener("click", () => { d.close(); const a = $("acctBtn"); if (a && !a.hidden) a.click(); });
+  const toAcct = () => { d.close(); const a = $("acctBtn"); if (a && !a.hidden) a.click(); };
+  $("localTipSignup").addEventListener("click", toAcct);
+  $("localTipLogin").addEventListener("click", toAcct);
   d.addEventListener("click", (e) => { if (e.target !== d) return; const r = d.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) d.close(); });
   addEventListener("popstate", () => { if (d.open) d.close(); });
 }
