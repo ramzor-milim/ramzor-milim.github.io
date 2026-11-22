@@ -63,8 +63,23 @@ dialog .or::before, dialog .or::after { content: ""; flex: 1; border-top: 1px so
 
 dialog .primary:disabled, dialog .secondary:disabled { opacity: .5; cursor: default; }
 .fb-link { font-size: .85rem; }
-.top-tools { display: flex; align-items: center; gap: 8px; }
 .fb-top span { background: var(--green-soft); color: var(--green); font-size: .75rem; }
+/* phone: login + suggestions share the top row; how it works becomes its ? circle so the suggestions button keeps its words */
+@media (max-width: 560px) {
+  .title-row:has(.acct:not([hidden])) { flex-wrap: nowrap; gap: 6px; }
+  .title-row:has(.acct:not([hidden])) h1 { white-space: nowrap; }
+  .title-row:has(.acct:not([hidden])) .how-link:not(.fb-top) { font-size: 0; gap: 0; padding: 4px; }
+  .title-row:has(.acct:not([hidden])) .how-link.fb-top { font-size: .78rem; gap: 4px; padding: 4px 8px 4px 5px; white-space: nowrap; flex: none; }
+  .title-row .fb-top span { width: 18px; height: 18px; }
+  .title-row .acct { max-width: 110px; min-width: 0; }
+}
+@media (max-width: 400px) {
+  .title-row:has(.acct:not([hidden])) { gap: 4px; }
+  .title-row:has(.acct:not([hidden])) h1 { font-size: 1.15rem; }
+  .title-row:has(.acct:not([hidden])) .lights { transform: scale(.85); }
+  .title-row:has(.acct:not([hidden])) .how-link.fb-top { font-size: .72rem; padding: 3px 6px 3px 4px; }
+  .title-row .acct { max-width: 96px; padding-inline: 8px; font-size: .78rem; }
+}
 .note-meta button.admin-note { color: var(--red); }
 #admDlg { width: min(94vw, 560px); }
 dialog .adm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 45vh; overflow: auto; }
@@ -113,12 +128,11 @@ body_html = body_html.replace(
     '      <button type="button" class="acct" id="acctBtn" data-in="false" hidden><i></i><span id="acctLabel">התחברות</span></button>\n'
     '    </div>')
 
-# --- "suggestions / report" button next to the language toggle (opens the same window as the footer link) ---
+# --- "suggestions / report" button in the top row, after "how it works" (on phones the login button joins that row); opens the same window as the footer link ---
 if firebase_config:
-    _seg = '      <div class="seg-tabs" role="group" aria-label="שפה">'
-    _end = body_html.index('</div>', body_html.index('id="lang-he"')) + len('</div>')
-    assert body_html.count(_seg) == 1
-    body_html = (body_html[:_end] + '</div>' + body_html[_end:]).replace(_seg, '      <div class="top-tools"><button type="button" class="how-link fb-top" id="fbTop"><span aria-hidden="true">💡</span>הצעות ודיווח</button>\n' + _seg, 1)
+    _how = 'איך זה עובד</button>\n'
+    assert body_html.count(_how) == 1
+    body_html = body_html.replace(_how, _how + '        <button type="button" class="how-link fb-top" id="fbTop"><span aria-hidden="true">💡</span>הצעות ודיווח</button>\n', 1)
 
 # --- footer: browser saving + backup/restore ---
 body_html = re.sub(
