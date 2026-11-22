@@ -445,6 +445,18 @@ textarea::placeholder, input::placeholder { color: var(--muted); opacity: .8; }
   .rate .o { font-size: 1.35rem; padding-block: 22px; }
   .rate small { font-size: .8rem; }
 }
+/* computers (mouse) with a wide window: the whole page uses a wider column instead of the phone-width one */
+@media (hover: hover) and (pointer: fine) and (min-width: 900px) {
+  .app { max-width: 920px; }
+}
+/* ...and when the window is also tall enough, a bigger word and rating buttons (short laptop screens keep the compact sizes so everything fits) */
+@media (hover: hover) and (pointer: fine) and (min-width: 900px) and (min-height: 760px) {
+  #main > .card .word { font-size: 3.8rem; padding-block: 24px 10px; }
+  #main > .card .word.long { font-size: 2.7rem; }
+  .rate { gap: 12px; }
+  .rate button { padding: 16px 8px; font-size: 1.15rem; border-radius: 16px; }
+  .rate small { font-size: .78rem; }
+}
 @media (prefers-reduced-motion: reduce) { #main > .card.card-in { animation: none; } }
 
 .empty { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 28px 20px; text-align: center; display: grid; gap: 10px; justify-items: center; }
