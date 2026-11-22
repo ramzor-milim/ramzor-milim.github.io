@@ -1980,6 +1980,14 @@ async function startAccounts() {
   });
 }
 
+/* account window: a tap outside it closes it (press and release both outside, so dragging out of a field doesn't) */
+{
+  const dlg = $("acctDlg");
+  const outside = (e) => { if (e.target !== dlg) return false; const r = dlg.getBoundingClientRect(); return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom; };
+  let downOutside = false;
+  dlg.addEventListener("pointerdown", (e) => { downOutside = outside(e); });
+  dlg.addEventListener("click", (e) => { if (downOutside && outside(e)) dlg.close(); downOutside = false; });
+}
 /* nickname: optional public name for shared associations, stored with the progress docs */
 function setShareName() { if (account) account.shareName = (account.nick || account.baseShare).slice(0, 40); }
 function takeNick(data) {
