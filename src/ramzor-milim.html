@@ -140,6 +140,14 @@ header > .bar { order: 1; height: 4px; margin-top: -4px; }   /* thin progress li
 .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
 .s-r { background: var(--red); } .s-o { background: var(--orange); } .s-g { background: var(--green); } .s-n { background: transparent; border: 1.5px solid var(--new); }
 
+/* focus mode (computers and tablets): only the card, its meaning and the rating buttons, centred in the window */
+.viewbar-end { display: flex; align-items: center; gap: 16px; }
+.focus-exit { display: none; }
+@media (max-width: 560px) { #focusBtn { display: none; } }
+.focus header, .focus .viewbar, .focus footer, .focus #hintBtn, .focus #hideHintBtn { display: none; }
+.focus .app { padding-block: 0; }
+.focus #main { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; padding-block: 48px 16px; }
+.focus .focus-exit { display: inline-flex; position: fixed; top: 12px; inset-inline-start: 12px; z-index: 6; }
 .viewbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-block: 14px 10px; flex-wrap: wrap; }
 .link { border: 0; background: none; color: var(--accent); font-weight: 600; padding: 4px 2px; text-decoration: underline; text-underline-offset: 3px; }
 
@@ -389,10 +397,6 @@ textarea::placeholder, input::placeholder { color: var(--muted); opacity: .8; }
 
 .rate { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; direction: ltr; } /* same left-to-right order as keys 1 2 3 */
 .rate button { direction: rtl; }
-/* computers and tablets: when the open meaning makes the card taller than the window, the rating buttons stay pinned at the bottom of the screen */
-@media (min-width: 561px) {
-  #main > .rate { position: sticky; bottom: 0; z-index: 3; background: var(--bg); margin-top: 4px; padding-block: 8px; }
-}
 .rate button { border: 1.5px solid; border-radius: 14px; padding: 12px 6px; font-weight: 700; display: grid; justify-items: center; gap: 2px; transition: transform 140ms var(--ease-out); }
 .rate button:active { transform: scale(.97); }
 .rate small { font-weight: 400; font-size: .72rem; opacity: .8; }
@@ -531,10 +535,14 @@ footer { margin-top: 26px; color: var(--muted); font-size: .82rem; display: grid
       <button type="button" id="view-stats" data-view="stats">ההתקדמות שלי</button>
       <button type="button" id="view-goals" data-view="goals">יעדים <span class="beta">beta</span></button>
     </div>
-    <button type="button" class="link" id="shuffleBtn"></button>
+    <span class="viewbar-end">
+      <button type="button" class="link" id="focusBtn" title="רק המילה, הפירוש והכפתורים · Esc ליציאה">⛶ מצב מיקוד</button>
+      <button type="button" class="link" id="shuffleBtn"></button>
+    </span>
   </div>
 
   <div class="wmodal" id="wordModal" hidden><div class="wm-box" role="dialog" aria-modal="true" aria-label="המילה" id="wmBox"></div></div>
+  <button type="button" class="how-link focus-exit" id="focusExit">✕ יציאה ממצב מיקוד</button>
   <main id="main"><div class="empty"><h2>טוען את המילון…</h2></div></main>
 
   <footer>
@@ -558,6 +566,11 @@ let queue = [], pos = 0, revealed = false, hint = false, pendingDelete = null, l
 let undoStack = [];   // [{w, prev, s, pos}], most recent last; cleared when the round is rebuilt
 
 const $ = (id) => document.getElementById(id);
+/* focus mode: remembered in this browser; only on screens wider than a phone and only on the practice view */
+let focusMode = (() => { try { return localStorage.getItem("ramzor-focus") === "true"; } catch (e) { return false; } })();
+const focusOn = () => focusMode && ui.view === "practice" && matchMedia("(min-width: 561px)").matches;
+function setFocus(on) { focusMode = on; lsSet("ramzor-focus", on); render(); window.scrollTo(0, 0); }
+matchMedia("(min-width: 561px)").addEventListener("change", () => { if (DICT && focusMode) render(); });
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const plain = (s) => s.normalize("NFD").replace(/[֑-ׇ]/g, "").toLowerCase();
 const lsGet = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -933,7 +946,7 @@ function renderHeader() {
   for (const v of ["practice", "list", "stats", "goals"]) $("view-" + v).setAttribute("aria-pressed", ui.view === v);
   $("howBtn").setAttribute("aria-pressed", ui.view === "how");
   $("shuffleBtn").textContent = ui.shuffle ? "סדר: מעורבב" : "סדר: לפי המילון";
-  $("shuffleBtn").hidden = ui.view !== "practice";
+  $("shuffleBtn").hidden = $("focusBtn").hidden = ui.view !== "practice";
   document.querySelector(".scope").hidden = document.getElementById("bar").hidden = document.getElementById("chips").hidden = ui.view === "how" || ui.view === "stats" || ui.view === "goals";
 }
 
@@ -982,7 +995,7 @@ function renderPractice() {
                ? `<button type="button" class="link small-link" id="hideHintBtn">הסתרת האסוציאציות</button>`
                : `<button type="button" class="link small-link" id="hintBtn">הצגת אסוציאציות (רמז)</button>`}`}
       </div>
-      ${revealed ? assocHTML(w) : hint ? hintHTML(w) : ""}
+      ${revealed ? (focusOn() ? "" : assocHTML(w)) : hint && !focusOn() ? hintHTML(w) : ""}
     </div>
     <div class="rate">
       <button type="button" class="g" data-rate="g" aria-current="${s === "g"}">יודעת<small>ירוק · 1</small></button>
@@ -1216,7 +1229,7 @@ function updateRow(rowEl) {
 }
 
 /* ---------- Render ---------- */
-function render() { renderHeader(); ui.view === "practice" ? renderPractice() : ui.view === "how" ? renderHow() : ui.view === "stats" ? renderStats() : ui.view === "goals" ? renderGoals() : renderList(); Nav.view(); }
+function render() { renderHeader(); ui.view === "practice" ? renderPractice() : ui.view === "how" ? renderHow() : ui.view === "stats" ? renderStats() : ui.view === "goals" ? renderGoals() : renderList(); Nav.view(); document.documentElement.classList.toggle("focus", focusOn()); }
 /* The phone's "back" button moves between the site's screens and closes open windows, instead of leaving the site.
    Each screen change and each open window adds one step to the browser history. Off inside an embedding frame. */
 const Nav = (() => {
@@ -1564,6 +1577,8 @@ document.addEventListener("click", (e) => {
   if (t.dataset.lang) { ui.lang = t.dataset.lang; query = ""; saveUI(); resetView(); return; }
   if (t.dataset.view) { ui.view = t.dataset.view; saveUI(); render(); return; }
   if (t.classList.contains("chip")) { ui.filter[t.dataset.s] = !ui.filter[t.dataset.s]; saveUI(); resetView(); return; }
+  if (t.id === "focusBtn") { setFocus(true); return; }
+  if (t.id === "focusExit") { setFocus(false); return; }
   if (t.id === "shuffleBtn") { ui.shuffle = !ui.shuffle; saveUI(); resetView(); return; }
   if (t.id === "revealBtn") { revealed = true; renderPractice(); return; }
   if (t.id === "hintBtn") { hint = true; renderPractice(); return; }
@@ -1806,6 +1821,7 @@ document.addEventListener("submit", (e) => {
 document.addEventListener("keydown", (e) => {
   if (modalWord && e.key === "Escape") { closeWord(); return; }
   if (modalWord && !e.target.closest("textarea, input")) return;
+  if (e.key === "Escape" && focusOn() && !e.target.closest("textarea, input")) { setFocus(false); return; }
   if (e.key === "Escape" && e.target.id === "gq") { e.target.value = ""; globalSearch(""); e.target.blur(); return; }
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "z" || e.key === "Z" || e.key === "ז") && !e.target.closest("textarea, input") && undoStack.length && ui.view === "practice") {
     e.preventDefault(); undoRate(); return;
