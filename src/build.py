@@ -125,8 +125,8 @@ head = (
 
 # --- account button in the unit row (on phones the page script moves it up next to "how it works") ---
 body_html = body_html.replace(
-    '<span class="total" id="total"></span>\n    </div>',
-    '<span class="total" id="total"></span>\n'
+    '>↺ איפוס</button>\n    </div>',
+    '>↺ איפוס</button>\n'
     '      <button type="button" class="acct" id="acctBtn" data-in="false" hidden><i></i><span id="acctLabel">התחברות</span></button>\n'
     '    </div>')
 

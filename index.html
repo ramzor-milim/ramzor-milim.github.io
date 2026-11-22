@@ -212,6 +212,10 @@ kbd { font-family: var(--body); font-size: .72rem; border: 1px solid var(--line)
 .undo-more { font-size: .8rem; }
 .undo-bar button { border: 1px solid var(--accent); background: transparent; color: var(--accent); border-radius: 10px; padding: 5px 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
 @media (hover: none) { .undo-bar kbd { display: none; } }
+/* reset the selected unit(s), with an undo bar under the header */
+.reset-link { font-size: .82rem; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.reset-bar .reset-actions { display: inline-flex; align-items: center; gap: 6px; }
+.reset-bar .reset-actions .link { border: 0; color: var(--muted); padding: 4px 6px; text-decoration: none; }
 .how-keys kbd { font-size: .8rem; padding: 1px 6px; margin-inline: 2px; }
 @media (hover: none) { .how-keys { display: none; } }
 /* Stats */
@@ -619,6 +623,7 @@ dialog .fb-kind label:has(input:checked) { border-color: var(--accent); backgrou
       <span class="total">מילים מ:</span>
       <details class="unit-pick" id="unitPick"><summary id="unitLabel">יחידה 1</summary><div class="unit-menu" id="unitMenu"></div></details>
       <span class="total" id="total"></span>
+      <button type="button" class="link reset-link" id="resetBtn" hidden title="כל המילים ביחידות שנבחרו יחזרו ל&quot;חדשות&quot; (האסוציאציות נשארות). אפשר לבטל.">↺ איפוס</button>
       <button type="button" class="acct" id="acctBtn" data-in="false" hidden><i></i><span id="acctLabel">התחברות</span></button>
     </div>
     <div class="gsearch" id="gsearch">
@@ -628,6 +633,7 @@ dialog .fb-kind label:has(input:checked) { border-color: var(--accent); backgrou
     <div class="bar" id="bar" aria-hidden="true"></div>
     <div class="chips" id="chips" role="group" aria-label="אילו מילים לתרגל"></div>
   </header>
+  <div class="undo-bar reset-bar" id="resetBar" role="status" hidden></div>
 
   <div class="viewbar">
     <div class="seg-tabs" role="group" aria-label="תצוגה">
@@ -1175,6 +1181,8 @@ function applyUnitChecks() {
 function renderHeader() {
   const c = counts(), total = c.r + c.o + c.g + c.n;
   renderUnitSelect();
+  $("resetBtn").hidden = !(c.r + c.o + c.g);
+  renderResetBar();
   $("total").textContent = total ? `${total} מילים · ${Math.round((c.g / total) * 100)}% בירוק` : "";
   $("bar").innerHTML = ["g", "o", "r", "n"].map((s) => `<span class="b-${s}" style="width:${total ? (c[s] / total) * 100 : 0}%"></span>`).join("");
   $("chips").innerHTML = CHIP_ORDER.map((s) => `
@@ -1316,6 +1324,32 @@ function undoRate() {
   setEntry(last.w, { s: last.prev });
   pos = last.pos; revealed = false; hint = false;
   renderHeader(); renderPractice();
+}
+
+/* reset the selected unit(s): every coloured word back to "new"; the undo is kept (also across reloads) until the bar is closed */
+const LS_RESET = "ramzor-reset-undo";
+let resetUndo = lsGet(LS_RESET);
+function resetUnit() {
+  const items = words().filter((x) => statusOf(x.w) !== "n").map((x) => ({ w: x.w, s: statusOf(x.w) }));
+  if (!items.length) return;
+  for (const it of items) setEntry(it.w, { s: "n" });
+  resetUndo = { lang: ui.lang, label: unitLabelText(selectedUnits()), items };
+  lsSet(LS_RESET, resetUndo);
+  resetView();
+}
+function undoReset() {
+  const r = resetUndo; if (!r) return;
+  for (const it of r.items) if (statusOf(it.w, r.lang) === "n") setEntry(it.w, { s: it.s }, r.lang);   // words rated again since the reset keep their new colour
+  dismissReset(); resetView();
+}
+function dismissReset() { resetUndo = null; try { localStorage.removeItem(LS_RESET); } catch (e) {} renderResetBar(); }
+function renderResetBar() {
+  const bar = $("resetBar"), r = resetUndo;
+  bar.hidden = !r || ui.view === "how";
+  if (!r) { bar.innerHTML = ""; return; }
+  const other = r.lang !== ui.lang ? ` (${r.lang === "en" ? "אנגלית" : "עברית"})` : "";
+  bar.innerHTML = `<span>↺ איפוס ${esc(r.label)}${other}: <b>${r.items.length}</b> מילים חזרו ל"חדשות"</span>
+    <span class="reset-actions"><button type="button" id="undoResetBtn">ביטול איפוס</button><button type="button" class="link" id="dismissResetBtn" aria-label="סגירה">✕</button></span>`;
 }
 
 /* ---------- Phone flashcard: tap to flip, swipe right = green, left = red ("not sure" is the big middle button) ---------- */
@@ -1817,6 +1851,9 @@ document.addEventListener("click", (e) => {
   if (t.dataset.lang) { ui.lang = t.dataset.lang; query = ""; saveUI(); resetView(); return; }
   if (t.dataset.view) { ui.view = t.dataset.view; saveUI(); render(); return; }
   if (t.classList.contains("chip")) { ui.filter[t.dataset.s] = !ui.filter[t.dataset.s]; saveUI(); resetView(); return; }
+  if (t.id === "resetBtn") { resetUnit(); return; }
+  if (t.id === "undoResetBtn") { undoReset(); return; }
+  if (t.id === "dismissResetBtn") { dismissReset(); return; }
   if (t.id === "focusBtn") { setFocus(true); return; }
   if (t.id === "focusExit") { setFocus(false); return; }
   if (t.id === "shuffleBtn") { ui.shuffle = !ui.shuffle; saveUI(); resetView(); return; }
@@ -2063,8 +2100,8 @@ document.addEventListener("keydown", (e) => {
   if (modalWord && !e.target.closest("textarea, input")) return;
   if (e.key === "Escape" && focusOn() && !e.target.closest("textarea, input")) { setFocus(false); return; }
   if (e.key === "Escape" && e.target.id === "gq") { e.target.value = ""; globalSearch(""); e.target.blur(); return; }
-  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "z" || e.key === "Z" || e.key === "ז") && !e.target.closest("textarea, input") && undoStack.length && ui.view === "practice") {
-    e.preventDefault(); undoRate(); return;
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "z" || e.key === "Z" || e.key === "ז") && !e.target.closest("textarea, input") && (undoStack.length || resetUndo) && ui.view === "practice") {
+    e.preventDefault(); undoStack.length ? undoRate() : undoReset(); return;
   }
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.target.closest(".composer") && matchMedia("(hover: hover)").matches) {
     e.preventDefault(); submitAssoc(e.target.closest(".composer")); return;
