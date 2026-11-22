@@ -999,6 +999,7 @@ function renderPractice() {
     main.innerHTML = `<div class="empty"><h2>סיימת סבב של ${queue.length} מילים</h2>
       <p>עכשיו יש ${c.r} באדום, ${c.o} בכתום ו-${c.g} בירוק. בסבב הבא יופיעו רק המילים בצבעים שבחרת.</p>
       <button type="button" class="primary" id="againBtn">סבב נוסף</button></div>`;
+    showUndo();
     return;
   }
   const item = queue[pos], w = item.w;
@@ -1030,6 +1031,7 @@ function renderPractice() {
       <button type="button" id="prevBtn" ${pos === 0 ? "disabled" : ""}>→ הקודמת</button>
       <button type="button" id="nextBtn">דילוג ←</button>
     </div>`;
+  showUndo();   // the undo bar survives every redraw (showing the meaning, a hint, flipping) until the round is rebuilt
 }
 /* ---------- Stats log ---------- */
 const Stats = { enabled: () => true };   // the public build allows tracking for signed-in users only
@@ -1071,7 +1073,7 @@ function rate(s) {
   if (undoStack.length > 50) undoStack.shift();
   setEntry(w, { s });
   pos++; revealed = false; hint = false;
-  renderHeader(); renderPractice(); showUndo();
+  renderHeader(); renderPractice();
 }
 function celebrate(text) {
   document.querySelectorAll(".celebrate").forEach((e) => e.remove());
@@ -1097,7 +1099,7 @@ function undoRate() {
   logRate(last.prev, last.s, -1, ui.lang, last.w);
   setEntry(last.w, { s: last.prev });
   pos = last.pos; revealed = false; hint = false;
-  renderHeader(); renderPractice(); showUndo();
+  renderHeader(); renderPractice();
 }
 
 /* ---------- Phone flashcard: tap to flip, swipe right = green, left = red ("not sure" is the big middle button) ---------- */
