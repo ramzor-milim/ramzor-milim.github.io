@@ -1795,7 +1795,7 @@ document.addEventListener("click", (e) => {
   if (t.id === "planOpen") { ui.unit = "d1"; ui.view = "practice"; planMsg = ""; saveUI(); resetView(); window.scrollTo(0, 0); return; }
   if (t.id === "unitAll") { ui.unit = "all"; saveUI(); resetView(); return; }
   if (t.id === "unitDone") { $("unitPick").open = false; return; }
-  if (t.id === "unitNone") { document.querySelectorAll(".unit-cb").forEach((b) => { b.checked = false; }); $("unitHint").hidden = false; return; }
+  if (t.id === "unitNone") { noUnit = true; render(); return; }
   if (t.dataset.unitJump) { ui.unit = t.dataset.unitJump; ui.view = "practice"; saveUI(); resetView(); window.scrollTo(0, 0); return; }
   if (t.classList.contains("signup-link")) { const a = document.getElementById("acctBtn"); if (a && !a.hidden) a.click(); return; }
   if (t.id === "nextBtn") { pos++; revealed = false; hint = false; renderPractice(); return; }
