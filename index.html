@@ -736,7 +736,7 @@ dialog .fb-kind label:has(input:checked) { border-color: var(--accent); backgrou
     </div>
     <div class="scope">
       <span class="total">מילים מ:</span>
-      <details class="unit-pick" id="unitPick" ontoggle="if (!this.open) renderUnitSelect()"><summary id="unitLabel">יחידה 1</summary><div class="unit-menu" id="unitMenu"></div></details>
+      <details class="unit-pick" id="unitPick"><summary id="unitLabel">יחידה 1</summary><div class="unit-menu" id="unitMenu"></div></details>
       <span class="total" id="total"></span>
       <button type="button" class="link reset-link" id="resetBtn" hidden title="כל המילים ביחידות שנבחרו יחזרו ל&quot;חדשות&quot; (האסוציאציות נשארות). אפשר לבטל.">↺ איפוס</button>
       <button type="button" class="acct" id="acctBtn" data-in="false" hidden><i></i><span id="acctLabel">התחברות</span></button>
@@ -1280,9 +1280,10 @@ function globalSearch(q) {
   box._hits = shown;
   box.hidden = false;
 }
+let noUnit = false;   // true after unchecking every unit, until one is picked again
 function renderUnitSelect() {
-  const set = selectedUnits(), all = allWords();
-  $("unitLabel").textContent = unitLabelText(set);
+  const set = noUnit ? new Set() : selectedUnits(), all = allWords();
+  $("unitLabel").textContent = noUnit ? "לא נבחרה יחידה" : unitLabelText(set);
   const opts = UNITS.map((u) => [String(u), "יחידה " + u, all.filter((x) => x.u === u).length]);
   if (state.c[ui.lang].length) opts.push(["mine", "המילים שלי", state.c[ui.lang].length]);
   const pl = planOf();
@@ -1290,13 +1291,13 @@ function renderUnitSelect() {
   $("unitMenu").innerHTML = `<div class="unit-grid">${opts.map(optHTML).join("")}</div>
     ${pl ? `<h5 class="plan-head">תוכנית הלימוד שלי <small>${pl.days.length} ימים · ${pl.size} מילים ביום</small></h5>
       <div class="unit-grid plan-grid">${pl.days.map((ws, i) => optHTML(["d" + (i + 1), "יום " + (i + 1), ws.length])).join("")}</div>` : ""}
-    <p class="unit-hint" id="unitHint" hidden>סמנו את היחידות שאתם רוצים לתרגל.</p>
+    <p class="unit-hint" id="unitHint"${noUnit ? "" : " hidden"}>סמנו את היחידות שאתם רוצים לתרגל.</p>
     <div class="unit-actions"><span><button type="button" class="link" id="unitAll">כל היחידות</button> · <button type="button" class="link" id="unitNone">ניקוי הכל</button></span><button type="button" class="link" id="unitDone">סגירה</button></div>`;
 }
 function applyUnitChecks() {
   const boxes = [...document.querySelectorAll(".unit-cb")];
   const on = boxes.filter((b) => b.checked).map((b) => b.value);
-  if (!on.length) { $("unitHint").hidden = false; return; }   // nothing checked for now: keep practising the old selection until a new unit is picked
+  if (!on.length) { noUnit = true; render(); return; }   // nothing checked: "no unit selected" until a new unit is picked (the saved choice is untouched)
   const unitBoxes = boxes.filter((b) => b.value[0] !== "d"), allUnitsOn = unitBoxes.every((b) => b.checked) && !on.some((v) => v[0] === "d");
   ui.unit = allUnitsOn ? "all" : on.join(",");
   saveUI(); resetView();
@@ -1304,7 +1305,7 @@ function applyUnitChecks() {
 function renderHeader() {
   const c = counts(), total = c.r + c.o + c.g + c.n;
   renderUnitSelect();
-  $("resetBtn").hidden = !(c.r + c.o + c.g);
+  $("resetBtn").hidden = noUnit || !(c.r + c.o + c.g);
   renderResetBar();
   $("total").textContent = total ? `${total} מילים · ${Math.round((c.g / total) * 100)}% בירוק` : "";
   $("bar").innerHTML = ["g", "o", "r", "n"].map((s) => `<span class="b-${s}" style="width:${total ? (c[s] / total) * 100 : 0}%"></span>`).join("");
@@ -1336,6 +1337,7 @@ function meaningHTML(m) {
 function renderPractice() {
   const main = $("main");
   if (!DICT) return;
+  if (noUnit) { main.innerHTML = `<div class="empty"><h2>לא נבחרה יחידה</h2><p>בחרו למעלה יחידה אחת או יותר לתרגול.</p></div>`; return; }
   if (!queue.length) {
     const active = CHIP_ORDER.filter((s) => ui.filter[s]);
     main.innerHTML = `<div class="empty"><h2>${active.length ? "אין מילים בצבעים שבחרת" : "לא נבחר אף צבע"}</h2>
@@ -1625,6 +1627,7 @@ function renderListRows() {
 }
 function renderList() {
   if (!DICT) return;
+  if (noUnit) { $("main").innerHTML = `<div class="empty"><h2>לא נבחרה יחידה</h2><p>בחרו למעלה יחידה אחת או יותר.</p></div>`; return; }
   $("main").innerHTML = `
     <div class="tools"><input type="search" id="search" placeholder="חיפוש מילה או פירוש" aria-label="חיפוש" value="${esc(query)}"></div>
     <div class="list" id="list"></div>
@@ -1657,7 +1660,7 @@ function renderFocusInfo() {
   const on = CHIP_ORDER.filter((k) => ui.filter[k]);
   const colours = on.length === CHIP_ORDER.length ? `<span class="fi-c">כל הצבעים</span>`
     : on.map((k) => `<span class="fi-c"><span class="dot s-${k}"></span>${STATUS[k]}</span>`).join("");
-  box.innerHTML = `<b>${esc(unitLabelText(selectedUnits()))}</b><span>·</span>${colours}<span>·</span><span>${queue.length} מילים בסבב</span>`;
+  box.innerHTML = `<b>${esc(noUnit ? "לא נבחרה יחידה" : unitLabelText(selectedUnits()))}</b><span>·</span>${colours}<span>·</span><span>${queue.length} מילים בסבב</span>`;
 }
 /* The phone's "back" button moves between the site's screens and closes open windows, instead of leaving the site.
    Each screen change and each open window adds one step to the browser history. Off inside an embedding frame. */
@@ -1962,7 +1965,7 @@ function renderHow() {
   </section>`;
 }
 function saveUI() { lsSet(LS_UI, ui); }
-function resetView() { for (const k in cache) delete cache[k]; listShown = PAGE; buildQueue(); render(); }
+function resetView() { noUnit = false; listShown = PAGE; buildQueue(); render(); }
 
 /* ---------- Events ---------- */
 document.addEventListener("click", (e) => {
@@ -2266,7 +2269,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.target.closest(".composer") && matchMedia("(hover: hover)").matches) {
     e.preventDefault(); submitAssoc(e.target.closest(".composer")); return;
   }
-  if (!DICT || ui.view !== "practice" || document.querySelector("dialog[open]") || e.target.closest("textarea, input, select") || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (!DICT || noUnit || ui.view !== "practice" || document.querySelector("dialog[open]") || e.target.closest("textarea, input, select") || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key === " " || e.key === "Enter") { if (e.target.closest("button")) return; e.preventDefault(); if (pos < queue.length) { revealed = !revealed; if (!revealed) hint = false; renderPractice(); } }
   else if ((e.key === "s" || e.key === "S" || e.key === "ד") && pos < queue.length) speakWord(queue[pos].w);
   else if (e.key === "1") rate("g"); else if (e.key === "2") rate("o"); else if (e.key === "3") rate("r");
