@@ -77,6 +77,17 @@ select { border: 1px solid var(--line); background: var(--surface); border-radiu
 .unit-opt { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: .9rem; }
 .unit-opt input { width: 16px; height: 16px; accent-color: var(--accent); }
 .unit-opt small { margin-inline-start: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+.nu-open { font: inherit; font-weight: 700; font-size: .9rem; color: var(--accent); background: transparent; border: 1.5px dashed var(--accent); border-radius: 10px; padding: 9px 10px; cursor: pointer; }
+@media (hover: hover) and (pointer: fine) { .nu-open:hover { background: var(--bg); } }
+.nu-form { display: grid; gap: 8px; }
+.nu-head { margin: 0; font-size: .95rem; }
+.nu-form input { font: inherit; font-size: .9rem; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); min-width: 0; }
+.nu-rows { display: grid; gap: 6px; max-height: 40vh; overflow-y: auto; }
+.nu-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.nu-more { justify-self: start; font-size: .85rem; }
+.nu-msg { margin: 0; min-height: 1.1em; font-size: .82rem; color: var(--accent); font-weight: 600; }
+.nu-msg:empty { display: none; }
+.nu-actions { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 8px; }
 .unit-hint { margin: 0; font-size: .82rem; color: var(--accent); font-weight: 600; }
 .unit-actions { display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 6px; }
 .gr { cursor: pointer; }
@@ -559,6 +570,9 @@ input[type="search"], input[type="text"] { width: 100%; border: 1px solid var(--
 .add h3 { margin: 0; font-size: .95rem; }
 .add .fields { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; }
 @media (max-width: 480px) { .add .fields { grid-template-columns: 1fr; } }
+.add-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: .9rem; }
+.add-group select, .add-group input { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.add-group input { flex: 1; min-width: 160px; }
 .add .msg { font-size: .85rem; color: var(--muted); margin: 0; min-height: 1.2em; }
 
 footer { margin-top: 26px; color: var(--muted); font-size: .82rem; display: grid; gap: 4px; text-align: center; }
@@ -973,7 +987,7 @@ function normLang(d) {
       if (RENAMED[k]) { o.p[RENAMED[k]] = { ...e, ...(o.p[RENAMED[k]] || {}) }; delete o.p[k]; }
     }
   }
-  if (Array.isArray(d.c)) o.c = d.c.filter((x) => x && x.w).map((x) => ({ w: String(x.w), m: String(x.m || "") }));
+  if (Array.isArray(d.c)) o.c = d.c.filter((x) => x && x.w).map((x) => (x.g ? { w: String(x.w), m: String(x.m || ""), g: String(x.g) } : { w: String(x.w), m: String(x.m || "") }));
   return o;
 }
 function normalize(d) {
@@ -994,6 +1008,10 @@ function allWords(lang = ui.lang) {
   cache[lang] = { key, list };
   return list;
 }
+/* custom units: a custom word with g = "name" belongs to the user's unit "name" (unit key "g:" + encoded name), without g to "המילים שלי" */
+const groupKey = (g) => "g:" + encodeURIComponent(g);
+const customKey = (x) => (x.g ? groupKey(x.g) : "mine");
+function customGroups(lang = ui.lang) { return [...new Set(state.c[lang].filter((x) => x.g).map((x) => x.g))]; }
 const planCache = {};
 function planOf(lang = ui.lang) { const pl = ui.plans && ui.plans[lang]; return pl && Array.isArray(pl.days) && pl.days.length ? pl : null; }
 function planMap(lang = ui.lang) {
@@ -1008,7 +1026,7 @@ function words(lang = ui.lang) {
   if (ui.unit === "all") return all;
   const set = new Set(String(ui.unit).split(","));
   const pm = planMap(lang);
-  return all.filter((x) => (x.custom ? set.has("mine") : set.has(String(x.u))) || (pm && pm.has(x.w) && set.has("d" + pm.get(x.w))));
+  return all.filter((x) => (x.custom ? set.has(customKey(x)) : set.has(String(x.u))) || (pm && pm.has(x.w) && set.has("d" + pm.get(x.w))));
 }
 const entry = (w, lang = ui.lang) => state.p[lang][w] || {};
 const statusOf = (w, lang = ui.lang) => entry(w, lang).s || "n";
@@ -1183,10 +1201,10 @@ function counts() {
   return c;
 }
 function selectedUnits() {
-  const hasMine = state.c[ui.lang].length > 0;
-  if (ui.unit === "all") return new Set(UNITS.map(String).concat(hasMine ? ["mine"] : []));
+  const mineKeys = [...new Set(state.c[ui.lang].map(customKey))];
+  if (ui.unit === "all") return new Set(UNITS.map(String).concat(mineKeys));
   const pl = planOf();
-  const valid = new Set(UNITS.map(String).concat(hasMine ? ["mine"] : [], pl ? pl.days.map((_, i) => "d" + (i + 1)) : []));
+  const valid = new Set(UNITS.map(String).concat(mineKeys, pl ? pl.days.map((_, i) => "d" + (i + 1)) : []));
   const set = new Set(String(ui.unit).split(",").filter((x) => valid.has(x)));
   if (!set.size) { ui.unit = "1"; return new Set(["1"]); }
   return set;
@@ -1205,7 +1223,8 @@ function unitLabelText(set) {
   const days = [...set].filter((x) => x[0] === "d").map((x) => Number(x.slice(1))).sort((a, b) => a - b);
   const dayTxt = days.length ? "תוכנית: " + (days.length === 1 ? "יום " : "ימים ") + compressNums(days) : "";
   set = new Set([...set].filter((x) => x[0] !== "d"));
-  const nums = [...set].filter((x) => x !== "mine").map(Number).sort((a, b) => a - b);
+  const groups = [...set].filter((x) => x.startsWith("g:")).map((x) => decodeURIComponent(x.slice(2)));
+  const nums = [...set].filter((x) => x !== "mine" && !x.startsWith("g:")).map(Number).sort((a, b) => a - b);
   const parts = [];
   for (let i = 0; i < nums.length; i++) {
     let j = i; while (j + 1 < nums.length && nums[j + 1] === nums[j] + 1) j++;
@@ -1213,7 +1232,7 @@ function unitLabelText(set) {
     i = j;
   }
   const txt = nums.length ? (nums.length === 1 ? "יחידה " : "יחידות ") + parts.join(", ") : "";
-  const base = set.has("mine") ? (txt ? txt + " + המילים שלי" : "המילים שלי") : txt;
+  const base = [txt, set.has("mine") ? "המילים שלי" : "", ...groups].filter(Boolean).join(" + ");
   return [base, dayTxt].filter(Boolean).join(" + ");
 }
 /* word window (opened from the search) */
@@ -1280,15 +1299,62 @@ function globalSearch(q) {
   box._hits = shown;
   box.hidden = false;
 }
+/* "new unit" form inside the unit menu: a name + the unit's first words (a unit exists through its words) */
+let nu = null;   // null = closed, else { name, rows: [{ w, m }], msg }
+function newUnitHTML() {
+  return `<form class="nu-form" id="nuForm">
+      <h5 class="nu-head">יחידה חדשה (${ui.lang === "en" ? "אנגלית" : "עברית"})</h5>
+      <input type="text" id="nuName" placeholder="שם היחידה, למשל: מילים מהמבחן" aria-label="שם היחידה" maxlength="40" value="${esc(nu.name)}">
+      <div class="nu-rows">${nu.rows.map((r, i) => `<div class="nu-row"><input type="text" class="nu-w" data-i="${i}" placeholder="מילה" aria-label="מילה" dir="${dirOf()}" value="${esc(r.w)}"><input type="text" class="nu-m" data-i="${i}" placeholder="פירוש" aria-label="פירוש" value="${esc(r.m)}"></div>`).join("")}</div>
+      <button type="button" class="link nu-more" id="nuMore">＋ עוד מילה</button>
+      <p class="nu-msg" id="nuMsg">${esc(nu.msg || "")}</p>
+      <div class="nu-actions"><button type="submit" class="primary">יצירת היחידה</button><button type="button" class="link" id="nuCancel">ביטול</button></div>
+    </form>`;
+}
+function newUnitCreate() {
+  const name = nu.name.trim().replace(/\s+/g, " ");
+  const fail = (msg, sel) => { nu.msg = msg; renderUnitSelect(); const el = sel && document.querySelector(sel); if (el) el.focus(); };
+  if (!name) return fail("כתבו שם ליחידה.", "#nuName");
+  if (name === "המילים שלי" || customGroups().includes(name)) return fail(`כבר יש יחידה בשם "${name}".`, "#nuName");
+  const rows = nu.rows.map((r) => ({ w: r.w.trim(), m: r.m.trim() })).filter((r) => r.w || r.m);
+  if (!rows.length) return fail("הוסיפו לפחות מילה אחת עם פירוש.", ".nu-w");
+  const half = rows.findIndex((r) => !r.w || !r.m);
+  if (half >= 0) return fail("לכל מילה צריך גם פירוש (ולהפך).", `.nu-${rows[half].w ? "m" : "w"}[data-i="${half}"]`);
+  const all = allWords(), seen = new Set();
+  for (const r of rows) {
+    const k = plain(r.w), ex = all.find((x) => plain(x.w) === k);
+    if (ex) return fail(`"${r.w}" כבר נמצאת ${ex.custom ? "במילים שלך" : `במילון (יחידה ${ex.u})`}.`);
+    if (seen.has(k)) return fail(`"${r.w}" מופיעה פעמיים.`);
+    seen.add(k);
+  }
+  for (const r of rows) state.c[ui.lang].push({ w: r.w, m: r.m, g: name });
+  save(ui.lang);
+  nu = null; noUnit = false;
+  ui.unit = groupKey(name); ui.filter.n = true; saveUI();
+  $("unitPick").open = false;
+  resetView();
+}
+document.addEventListener("input", (e) => {
+  if (!nu || !e.target.closest("#nuForm")) return;
+  const t = e.target, i = Number(t.dataset.i);
+  if (t.id === "nuName") nu.name = t.value;
+  else if (t.classList.contains("nu-w")) nu.rows[i].w = t.value;
+  else if (t.classList.contains("nu-m")) nu.rows[i].m = t.value;
+});
+document.addEventListener("toggle", (e) => { if (e.target.id === "unitPick" && !e.target.open && nu) { nu = null; renderUnitSelect(); } }, true);
 let noUnit = false;   // true after unchecking every unit, until one is picked again
 function renderUnitSelect() {
   const set = noUnit ? new Set() : selectedUnits(), all = allWords();
   $("unitLabel").textContent = noUnit ? "לא נבחרה יחידה" : unitLabelText(set);
   const opts = UNITS.map((u) => [String(u), "יחידה " + u, all.filter((x) => x.u === u).length]);
-  if (state.c[ui.lang].length) opts.push(["mine", "המילים שלי", state.c[ui.lang].length]);
+  const loose = state.c[ui.lang].filter((x) => !x.g).length;
+  if (loose) opts.push(["mine", "המילים שלי", loose]);
+  for (const g of customGroups()) opts.push([groupKey(g), esc(g), state.c[ui.lang].filter((x) => x.g === g).length]);
   const pl = planOf();
+  if (nu) { $("unitMenu").innerHTML = newUnitHTML(); return; }
   const optHTML = ([v, l, n]) => `<label class="unit-opt"><input type="checkbox" class="unit-cb" value="${v}"${set.has(v) ? " checked" : ""}><span>${l}</span><small>${n}</small></label>`;
-  $("unitMenu").innerHTML = `<div class="unit-grid">${opts.map(optHTML).join("")}</div>
+  $("unitMenu").innerHTML = `<button type="button" class="nu-open" id="nuOpen">＋ יצירת יחידה חדשה עם מילים משלך</button>
+    <div class="unit-grid">${opts.map(optHTML).join("")}</div>
     ${pl ? `<h5 class="plan-head">תוכנית הלימוד שלי <small>${pl.days.length} ימים · ${pl.size} מילים ביום</small></h5>
       <div class="unit-grid plan-grid">${pl.days.map((ws, i) => optHTML(["d" + (i + 1), "יום " + (i + 1), ws.length])).join("")}</div>` : ""}
     <p class="unit-hint" id="unitHint"${noUnit ? "" : " hidden"}>סמנו את היחידות שאתם רוצים לתרגל.</p>
@@ -1638,10 +1704,30 @@ function renderList() {
         <input type="text" id="newMeaning" placeholder="הפירוש" aria-label="הפירוש" required>
         <button type="submit" class="primary">הוספה</button>
       </div>
+      ${addGroupHTML()}
       <p class="msg" id="addMsg"></p>
     </form>`;
   renderListRows();
 }
+function addGroupHTML() {
+  const groups = customGroups(), set = selectedUnits();
+  const cur = ui.unit !== "all" && set.size === 1 && [...set][0].startsWith("g:") ? decodeURIComponent([...set][0].slice(2)) : "";
+  return `<div class="add-group">
+        <label for="newGroup">לשמור ב:</label>
+        <select id="newGroup">
+          <option value="">המילים שלי</option>
+          ${groups.map((g) => `<option value="${esc(g)}"${g === cur ? " selected" : ""}>${esc(g)}</option>`).join("")}
+          <option value="__new">＋ יחידה חדשה…</option>
+        </select>
+        <input type="text" id="newGroupName" placeholder="שם היחידה החדשה" aria-label="שם היחידה החדשה" maxlength="40" hidden>
+      </div>`;
+}
+document.addEventListener("change", (e) => {
+  if (e.target.id !== "newGroup") return;
+  const inp = $("newGroupName"), isNew = e.target.value === "__new";
+  inp.hidden = !isNew; inp.required = isNew;
+  if (isNew) inp.focus();
+});
 function rowOf(el) { const r = el.closest(".row"); return r ? listItems[Number(r.dataset.i)] : null; }
 function updateRow(rowEl) {
   const x = listItems[Number(rowEl.dataset.i)]; if (!x) return;
@@ -2033,6 +2119,9 @@ document.addEventListener("click", (e) => {
   if (t.id === "planResetNo") { planConfirm = false; renderGoals(); return; }
   if (t.id === "planResetYes") { resetPlan(); return; }
   if (t.id === "planOpen") { ui.unit = "d1"; ui.view = "practice"; planMsg = ""; saveUI(); resetView(); window.scrollTo(0, 0); return; }
+  if (t.id === "nuOpen") { nu = { name: "", rows: [{ w: "", m: "" }, { w: "", m: "" }, { w: "", m: "" }], msg: "" }; renderUnitSelect(); $("nuName").focus(); return; }
+  if (t.id === "nuMore") { nu.rows.push({ w: "", m: "" }); renderUnitSelect(); document.querySelector(`.nu-w[data-i="${nu.rows.length - 1}"]`).focus(); return; }
+  if (t.id === "nuCancel") { nu = null; renderUnitSelect(); return; }
   if (t.id === "unitAll") { ui.unit = "all"; saveUI(); resetView(); return; }
   if (t.id === "unitDone") { $("unitPick").open = false; return; }
   if (t.id === "unitNone") { noUnit = true; render(); return; }
@@ -2247,16 +2336,21 @@ document.addEventListener("paste", (e) => {
 });
 document.addEventListener("submit", (e) => {
   if (e.target.classList.contains("composer")) { e.preventDefault(); submitAssoc(e.target); return; }
+  if (e.target.id === "nuForm") { e.preventDefault(); newUnitCreate(); return; }
   if (e.target.id !== "addForm") return;
   e.preventDefault();
   const w = $("newWord").value.trim(), m = $("newMeaning").value.trim();
   if (!w || !m) return;
   const existing = allWords().find((x) => plain(x.w) === plain(w));
   if (existing) { $("addMsg").textContent = `"${w}" כבר במילון${existing.u ? ` (יחידה ${existing.u})` : ""}.`; return; }
-  state.c[ui.lang].push({ w, m }); save(ui.lang);
-  ui.unit = "mine"; ui.filter.n = true; saveUI();
+  const sel = $("newGroup") ? $("newGroup").value : "";
+  let g = sel === "__new" ? $("newGroupName").value.trim().replace(/\s+/g, " ") : sel;
+  if (sel === "__new" && !g) { $("addMsg").textContent = "כתבו שם ליחידה החדשה."; $("newGroupName").focus(); return; }
+  if (g === "המילים שלי") g = "";
+  state.c[ui.lang].push(g ? { w, m, g } : { w, m }); save(ui.lang);
+  ui.unit = g ? groupKey(g) : "mine"; ui.filter.n = true; saveUI();
   resetView();
-  $("addMsg").textContent = `"${w}" נוספה ל"המילים שלי".`;
+  $("addMsg").textContent = `"${w}" נוספה ל"${g || "המילים שלי"}".`;
 });
 document.addEventListener("keydown", (e) => {
   if (modalWord && e.key === "Escape") { closeWord(); return; }
