@@ -1471,15 +1471,17 @@ function renderList() {
 }
 function addGroupHTML() {
   const groups = customGroups(), set = selectedUnits();
-  const cur = ui.unit !== "all" && set.size === 1 && [...set][0].startsWith("g:") ? decodeURIComponent([...set][0].slice(2)) : "";
+  const one = ui.unit !== "all" && set.size === 1 ? [...set][0] : "";
+  const loose = state.c[ui.lang].some((x) => !x.g);   // old "המילים שלי" pile: offered only to users who already have words in it
+  const cur = one.startsWith("g:") ? decodeURIComponent(one.slice(2)) : one === "mine" && loose ? "" : "__new";
   return `<div class="add-group">
         <label for="newGroup">לשמור ב:</label>
         <select id="newGroup">
-          <option value="">המילים שלי</option>
+          ${loose ? `<option value=""${cur === "" ? " selected" : ""}>המילים שלי</option>` : ""}
           ${groups.map((g) => `<option value="${esc(g)}"${g === cur ? " selected" : ""}>${esc(g)}</option>`).join("")}
-          <option value="__new">＋ יחידה חדשה…</option>
+          <option value="__new"${cur === "__new" ? " selected" : ""}>＋ יחידה חדשה…</option>
         </select>
-        <input type="text" id="newGroupName" placeholder="שם היחידה החדשה" aria-label="שם היחידה החדשה" maxlength="40" hidden>
+        <input type="text" id="newGroupName" placeholder="שם היחידה החדשה" aria-label="שם היחידה החדשה" maxlength="40"${cur === "__new" ? " required" : " hidden"}>
       </div>`;
 }
 document.addEventListener("change", (e) => {
