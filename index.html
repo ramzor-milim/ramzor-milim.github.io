@@ -736,7 +736,7 @@ dialog .fb-kind label:has(input:checked) { border-color: var(--accent); backgrou
     </div>
     <div class="scope">
       <span class="total">מילים מ:</span>
-      <details class="unit-pick" id="unitPick"><summary id="unitLabel">יחידה 1</summary><div class="unit-menu" id="unitMenu"></div></details>
+      <details class="unit-pick" id="unitPick" ontoggle="if (!this.open) renderUnitSelect()"><summary id="unitLabel">יחידה 1</summary><div class="unit-menu" id="unitMenu"></div></details>
       <span class="total" id="total"></span>
       <button type="button" class="link reset-link" id="resetBtn" hidden title="כל המילים ביחידות שנבחרו יחזרו ל&quot;חדשות&quot; (האסוציאציות נשארות). אפשר לבטל.">↺ איפוס</button>
       <button type="button" class="acct" id="acctBtn" data-in="false" hidden><i></i><span id="acctLabel">התחברות</span></button>
@@ -1296,7 +1296,7 @@ function renderUnitSelect() {
 function applyUnitChecks() {
   const boxes = [...document.querySelectorAll(".unit-cb")];
   const on = boxes.filter((b) => b.checked).map((b) => b.value);
-  if (!on.length) { renderUnitSelect(); return; }   // keep at least one unit selected
+  if (!on.length) { $("unitHint").hidden = false; return; }   // nothing checked for now: keep practising the old selection until a new unit is picked
   const unitBoxes = boxes.filter((b) => b.value[0] !== "d"), allUnitsOn = unitBoxes.every((b) => b.checked) && !on.some((v) => v[0] === "d");
   ui.unit = allUnitsOn ? "all" : on.join(",");
   saveUI(); resetView();
