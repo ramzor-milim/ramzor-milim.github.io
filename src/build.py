@@ -120,6 +120,7 @@ head = (
     '<meta name="mobile-web-app-capable" content="yes">\n'
     '<meta name="apple-mobile-web-app-title" content="רמזור מילים">\n'
     '<meta name="theme-color" content="#f3f5f8">\n'
+    '<meta name="robots" content="noindex, nofollow">\n'
     + head_part + extra_css + "</head>\n<body>\n"
 )
 
