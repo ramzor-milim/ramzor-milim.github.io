@@ -1,0 +1,3 @@
+# source files are kept only on the owner's computer
+src/
+firestore.rules
